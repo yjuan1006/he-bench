@@ -1,0 +1,31 @@
+# --- Python venv / 환경 ---
+venv/
+__pycache__/
+*.pyc
+
+# --- CMake 빌드 산출물 ---
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+
+# --- 컴파일 바이너리 / 오브젝트 ---
+openfhe_bench
+*.o
+*.a
+*.so
+*.out
+
+# --- 벤치마크 결과 (재생성 가능) ---
+results_*.csv
+plot_*.png
+
+# --- 저장된 실행 산출물 ---
+runs/
+
+# --- 에디터/OS 부산물 ---
+.vscode/
+.idea/
+.DS_Store
