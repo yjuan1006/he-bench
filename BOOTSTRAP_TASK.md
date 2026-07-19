@@ -124,14 +124,26 @@ Lattigo `ring.Ternary{H: 32768}`은 정확히 **N/2 = 32,768**이다. 둘 다 "�
 
 참고로 희소키의 이득 크기도 실측했다 (step 4 설정, `SecretKeyDist`만 변경):
 
-| secretKeyDist | GetBootstrapDepth | 평균 정밀도 |
-|---|---|---|
-| `UNIFORM_TERNARY` (조밀) | 21 | 12.35비트 |
-| `SPARSE_TERNARY` (희소) | **17** | **18.71비트** |
+| secretKeyDist | GetBootstrapDepth | 평균 정밀도 | bootstrap 지연시간 |
+|---|---|---|---|
+| `UNIFORM_TERNARY` (조밀) | 21 | 12.35비트 | 38.10 s ± 0.26 (reps 10) |
+| `SPARSE_TERNARY` (희소) | **17** | **18.71비트** | **24.48 s ± 0.14** (reps 5) |
 
-희소키는 정밀도 +6.4비트에 깊이 −4단계로 양쪽 모두 유리하다.
+희소키는 정밀도 +6.4비트, 깊이 −4단계, 지연시간 −36%(1.56배 빠름)로 세 지표 모두 유리하다.
 이것이 결정 1이 존재하는 이유이며, **정밀도가 낮다는 이유로 희소키로 전환해선 안 된다** —
 정밀도를 산 게 아니라 보안 가정을 판 것이 된다.
+
+> **지연시간 열 주의.** 깊이·정밀도는 이등분 진단 프로그램(`boot_bisect`)에서 나온 값이고,
+> 지연시간은 본 벤치(`openfhe_boot_bench`)에서 측정했다. 두 설정은 동일하다
+> (ringDim 65536, full packing, levelBudget {4,3}, levelsAfterBoot 8, scaleMod 59,
+> firstMod 60, FLEXIBLEAUTO). 조밀 값은 `results_boot2_openfhe_mt.csv`,
+> 희소 값은 `results_boot_openfhe_sparse_robustness.csv`에서 온 것이다.
+>
+> **희소 24.48 s는 `-warmup 3` 재측정값이다.** 이전에 기록했던 25.17 s는 `-warmup 1`이라
+> 첫 반복(23.14 s)이 덜 워밍업된 채 평균에 섞인 오염된 값이었다.
+> 첫 반복만 제외한 추정치(25.67 s)도 부정확했다 — 실제로는 전 반복이 덜 워밍업된 상태였고,
+> 제대로 워밍업하니 두 추정치보다 모두 낮은 24.48 s로 수렴했다.
+> 부트스트래핑 측정에 `-warmup 3` 이상을 요구하는 근거가 이 사례다(`CLAUDE.md` 참조).
 
 ### Lattigo 쪽 (residual 파라미터)
 
