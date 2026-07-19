@@ -1,0 +1,8 @@
+# 비밀키 분포 비정합 - robustness check 전용. 본 비교 결과 아님.
+# OpenFHE=SPARSE_TERNARY, Lattigo=dense H=32768. 확정 설계 결정 1 위반 상태.
+library,preset,logN,numSlots,in_level,out_level,op,mean_us,std_us,reps,key_bytes,peak_rss_mb,limbs_q,limbs_p,thread_mechanism
+openfhe,boot16-sparse-rc,16,32768,1,9,bootstrap,25165523.867,1137000.318,5,10587078656,14724.1,26,9,OMP_NUM_THREADS=4
+openfhe,boot16-sparse-rc,16,32768,1,9,btp_setup,6125055.308,0.000,1,10587078656,14724.1,26,9,OMP_NUM_THREADS=4
+openfhe,boot16-sparse-rc,16,32768,1,9,btp_keygen,27135835.165,0.000,1,10587078656,14724.1,26,9,OMP_NUM_THREADS=4
+openfhe,boot16-sparse-rc,16,32768,1,9,us_per_level,3145690.483,142125.040,5,10587078656,14724.1,26,9,OMP_NUM_THREADS=4
+openfhe,boot16-sparse-rc,16,32768,1,9,precision_bits,18.686,16.100,1,10587078656,14724.1,26,9,OMP_NUM_THREADS=4

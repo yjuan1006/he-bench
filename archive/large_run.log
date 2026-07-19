@@ -1,0 +1,18 @@
+[large] logN=15 maxLevel=15
+  L=15 add_cc= 595.42 mul_cc= 4003.16 relin=116914.61 rot1=117989.39 rescale=15372.67
+  L=14 add_cc= 586.23 mul_cc= 3703.86 relin=113384.69 rot1=112546.60 rescale=14202.76
+  L=13 add_cc= 529.98 mul_cc= 3438.30 relin=93424.48 rot1=94124.02 rescale=13143.84
+  L=12 add_cc= 440.61 mul_cc= 3352.47 relin=88540.42 rot1=90093.51 rescale=12283.11
+  L=11 add_cc= 444.98 mul_cc= 3088.97 relin=71381.44 rot1=71991.13 rescale=11022.73
+  L=10 add_cc= 370.28 mul_cc= 2833.56 relin=66603.96 rot1=66249.84 rescale=10360.30
+  L= 9 add_cc= 342.36 mul_cc= 2476.36 relin=53533.41 rot1=53304.69 rescale= 9067.05
+  L= 8 add_cc= 313.41 mul_cc= 2214.36 relin=49037.88 rot1=49418.34 rescale= 8428.95
+  L= 7 add_cc= 272.87 mul_cc= 1908.11 relin=37645.24 rot1=37651.81 rescale= 7254.68
+  L= 6 add_cc= 237.79 mul_cc= 1871.40 relin=34168.40 rot1=34341.06 rescale= 6339.16
+  L= 5 add_cc= 214.31 mul_cc= 1419.22 relin=24986.62 rot1=25742.62 rescale= 5645.16
+  L= 4 add_cc= 172.22 mul_cc= 1178.06 relin=22417.90 rot1=23144.94 rescale= 4556.01
+  L= 3 add_cc= 141.16 mul_cc=  965.34 relin=14812.95 rot1=14732.11 rescale= 3577.25
+  L= 2 add_cc= 105.12 mul_cc=  713.98 relin=12434.81 rot1=12569.98 rescale= 2704.89
+  L= 1 add_cc=  71.17 mul_cc=  473.70 relin= 7368.94 rot1= 7300.99 rescale= 1779.53
+wrote results_lattigo_large.csv (120 rows)
+EXIT=0

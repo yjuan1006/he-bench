@@ -43,6 +43,10 @@ logN 13/14/15). 기본 reps=30, warmup=3. -preset, -reps 플래그 지원.
 - 입력 암호문은 30회 반복 재사용 OK — Add/Mul/Rotate/Rescale은 out-of-place라 입력 불변.
 - ns로 재고 μs(float) 환산. 표본표준편차 n-1.
 - 파라미터는 벤치마크용 근사치이며 검증된 보안 파라미터 아님(README/코드에 명시).
+- **`OMP_NUM_THREADS`는 Go에 무효.** Lattigo 코어 제한은 `GOMAXPROCS`를 쓸 것.
+  (`OMP_NUM_THREADS=1 go run ...`은 mt 재측정이 될 뿐이다 — 실측으로 0.1% 차이 확인)
+- **부트스트래핑 측정은 `-warmup 3` 이상.** warmup 1이면 첫 반복이 이상치로 나와
+  표준편차가 부풀려진다(OpenFHE 희소 검증에서 rep1만 23.1s, rep2~5는 25.6s).
 
 ## 검증된 API 사실 (VERIFIED — 그대로 따를 것, 환각 금지)
 

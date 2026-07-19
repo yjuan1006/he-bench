@@ -1,0 +1,17 @@
+library,preset,logN,maxLevel,level,op,mean_us,std_us,reps,limbs_q,limbs_p,thread_mechanism,source,cond
+lattigo,boot16-ks,16,27,27,mul_cc,15204.451,376.74,30,28,5,GOMAXPROCS=4,results_ks_lattigo_mt.csv,mt
+lattigo,boot16-ks,16,27,27,mul_cc_rlk,399533.053,6602.462,30,28,5,GOMAXPROCS=4,results_ks_lattigo_mt.csv,mt
+lattigo,boot16-ks,16,27,27,relin,384328.602,0.0,30,28,5,GOMAXPROCS=4,results_ks_lattigo_mt.csv,mt
+lattigo,boot16-ks,16,27,27,rot1,393508.825,6797.919,30,28,5,GOMAXPROCS=4,results_ks_lattigo_mt.csv,mt
+lattigo,boot16-ks,16,27,27,mul_cc,15160.315,922.145,30,28,5,GOMAXPROCS=1,results_ks_lattigo_1core.csv,1core
+lattigo,boot16-ks,16,27,27,mul_cc_rlk,397813.739,6969.518,30,28,5,GOMAXPROCS=1,results_ks_lattigo_1core.csv,1core
+lattigo,boot16-ks,16,27,27,relin,382653.425,0.0,30,28,5,GOMAXPROCS=1,results_ks_lattigo_1core.csv,1core
+lattigo,boot16-ks,16,27,27,rot1,391841.611,4956.729,30,28,5,GOMAXPROCS=1,results_ks_lattigo_1core.csv,1core
+openfhe,boot16-ks,16,29,29,mul_cc,59979.917,2806.688,30,30,10,OMP_NUM_THREADS=4,results_ks_openfhe_mt.csv,mt
+openfhe,boot16-ks,16,29,29,mul_cc_rlk,369374.668,15690.482,30,30,10,OMP_NUM_THREADS=4,results_ks_openfhe_mt.csv,mt
+openfhe,boot16-ks,16,29,29,relin,309394.75,0.0,30,30,10,OMP_NUM_THREADS=4,results_ks_openfhe_mt.csv,mt
+openfhe,boot16-ks,16,29,29,rot1,323921.774,19629.026,30,30,10,OMP_NUM_THREADS=4,results_ks_openfhe_mt.csv,mt
+openfhe,boot16-ks,16,29,29,mul_cc,93805.423,2107.627,30,30,10,OMP_NUM_THREADS=1,results_ks_openfhe_1core.csv,1core
+openfhe,boot16-ks,16,29,29,mul_cc_rlk,647224.881,8962.436,30,30,10,OMP_NUM_THREADS=1,results_ks_openfhe_1core.csv,1core
+openfhe,boot16-ks,16,29,29,relin,553419.457,0.0,30,30,10,OMP_NUM_THREADS=1,results_ks_openfhe_1core.csv,1core
+openfhe,boot16-ks,16,29,29,rot1,591928.156,5997.677,30,30,10,OMP_NUM_THREADS=1,results_ks_openfhe_1core.csv,1core

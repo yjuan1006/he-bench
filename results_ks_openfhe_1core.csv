@@ -1,0 +1,5 @@
+library,preset,logN,maxLevel,level,op,mean_us,std_us,reps,limbs_q,limbs_p,thread_mechanism
+openfhe,boot16-ks,16,29,29,mul_cc,93805.423,2107.627,30,30,10,OMP_NUM_THREADS=1
+openfhe,boot16-ks,16,29,29,mul_cc_rlk,647224.881,8962.436,30,30,10,OMP_NUM_THREADS=1
+openfhe,boot16-ks,16,29,29,relin,553419.457,0.000,30,30,10,OMP_NUM_THREADS=1
+openfhe,boot16-ks,16,29,29,rot1,591928.156,5997.677,30,30,10,OMP_NUM_THREADS=1

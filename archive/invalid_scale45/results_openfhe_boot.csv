@@ -1,0 +1,5 @@
+library,preset,logN,numSlots,in_level,out_level,op,mean_us,std_us,reps,key_bytes,peak_rss_mb
+openfhe,boot16,16,32768,1,10,bootstrap,29247268.640,0.000,1,12108955648,16669.3
+openfhe,boot16,16,32768,1,10,btp_setup,6595170.152,0.000,1,12108955648,16669.3
+openfhe,boot16,16,32768,1,10,btp_keygen,30372117.884,0.000,1,12108955648,16669.3
+openfhe,boot16,16,32768,1,10,us_per_level,3249696.516,0.000,1,12108955648,16669.3

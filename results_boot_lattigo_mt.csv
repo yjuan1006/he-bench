@@ -1,0 +1,4 @@
+library,preset,logN,numSlots,in_level,out_level,op,mean_us,std_us,reps,key_bytes,peak_rss_mb,thread_mechanism
+lattigo,boot16,16,32768,1,9,bootstrap,23581700.900,63102.922,10,10383174413,18353.4,GOMAXPROCS=4
+lattigo,boot16,16,32768,1,9,btp_keygen,56667872.277,0.000,1,10383174413,18353.4,GOMAXPROCS=4
+lattigo,boot16,16,32768,1,9,us_per_level,2947712.612,7887.865,10,10383174413,18353.4,GOMAXPROCS=4

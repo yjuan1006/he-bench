@@ -1,0 +1,4 @@
+library,preset,logN,numSlots,in_level,out_level,op,mean_us,std_us,reps,key_bytes,peak_rss_mb,thread_mechanism
+lattigo,boot16,16,32768,1,9,bootstrap,23558228.600,23541.691,10,10383174413,20327.8,OMP_NUM_THREADS=1 (Go에 무효; 실질 GOMAXPROCS=4)
+lattigo,boot16,16,32768,1,9,btp_keygen,56654270.956,0.000,1,10383174413,20327.8,OMP_NUM_THREADS=1 (Go에 무효; 실질 GOMAXPROCS=4)
+lattigo,boot16,16,32768,1,9,us_per_level,2944778.575,2942.711,10,10383174413,20327.8,OMP_NUM_THREADS=1 (Go에 무효; 실질 GOMAXPROCS=4)

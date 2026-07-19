@@ -33,3 +33,11 @@ link_directories(${OPENMP_LIBRARIES})
 
 add_executable(openfhe_bench openfhe_bench.cpp)
 target_link_libraries(openfhe_bench ${OpenFHE_SHARED_LIBRARIES})
+
+# 부트스트래핑 벤치 (별도 실행파일 — 프리셋/CSV 모두 기존 8-op 벤치와 분리)
+add_executable(openfhe_boot_bench openfhe_boot_bench.cpp)
+target_link_libraries(openfhe_boot_bench ${OpenFHE_SHARED_LIBRARIES})
+
+# key-switch 단건 비용 벤치 (logN 16 / boot16 체인) — 부트스트래핑 격차 원인 분해용
+add_executable(openfhe_ks_bench openfhe_ks_bench.cpp)
+target_link_libraries(openfhe_ks_bench ${OpenFHE_SHARED_LIBRARIES})

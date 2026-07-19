@@ -1,0 +1,5 @@
+library,preset,logN,maxLevel,level,op,mean_us,std_us,reps,limbs_q,limbs_p,thread_mechanism
+lattigo,boot16-ks,16,27,27,mul_cc,15160.315,922.145,30,28,5,GOMAXPROCS=1
+lattigo,boot16-ks,16,27,27,mul_cc_rlk,397813.739,6969.518,30,28,5,GOMAXPROCS=1
+lattigo,boot16-ks,16,27,27,relin,382653.425,0.000,30,28,5,GOMAXPROCS=1
+lattigo,boot16-ks,16,27,27,rot1,391841.611,4956.729,30,28,5,GOMAXPROCS=1

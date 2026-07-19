@@ -1,0 +1,6 @@
+library,preset,logN,numSlots,in_level,out_level,op,mean_us,std_us,reps,key_bytes,peak_rss_mb,limbs_q,limbs_p,thread_mechanism
+openfhe,boot16,16,32768,1,9,bootstrap,60372893.056,187847.324,10,12007112704,16649.8,30,10,OMP_NUM_THREADS=1
+openfhe,boot16,16,32768,1,9,btp_setup,14582587.387,0.000,1,12007112704,16649.8,30,10,OMP_NUM_THREADS=1
+openfhe,boot16,16,32768,1,9,btp_keygen,74488362.298,0.000,1,12007112704,16649.8,30,10,OMP_NUM_THREADS=1
+openfhe,boot16,16,32768,1,9,us_per_level,7546611.632,23480.915,10,12007112704,16649.8,30,10,OMP_NUM_THREADS=1
+openfhe,boot16,16,32768,1,9,precision_bits,12.333,9.452,1,12007112704,16649.8,30,10,OMP_NUM_THREADS=1

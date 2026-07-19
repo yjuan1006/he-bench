@@ -1,5 +1,7 @@
 # --- Python venv / 환경 ---
 venv/
+# 점 붙은 형태도 제외 (gitignore는 행 중간 주석을 지원하지 않으므로 주석은 별도 행에)
+.venv/
 __pycache__/
 *.pyc
 
@@ -13,14 +15,19 @@ Makefile
 
 # --- 컴파일 바이너리 / 오브젝트 ---
 openfhe_bench
+openfhe_boot_bench
+openfhe_ks_bench
 *.o
 *.a
 *.so
 *.out
 
-# --- 벤치마크 결과 (재생성 가능) ---
-results_*.csv
-plot_*.png
+# --- 벤치마크 결과 ---
+# 버전 관리 대상이다. 예전엔 "재생성 가능"을 이유로 제외했으나, 실제로 사고가 났다:
+# aggregate.py를 잘못된 입력으로 돌려 _mt PNG 12장이 반쪽 데이터로 덮어써졌고
+# git에 없어 복구가 불가능했다(우연히 남아 있던 병합 CSV로 겨우 되살림).
+# 측정 산출물은 발표 근거 자료이므로 이력을 남긴다. archive/의 무효 CSV도 포함한다
+# — 무엇이 왜 폐기됐는지가 곧 실험 기록이다.
 
 # --- 저장된 실행 산출물 ---
 runs/
