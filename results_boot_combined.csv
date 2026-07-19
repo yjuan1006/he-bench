@@ -21,8 +21,8 @@ lattigo,boot16-sparse,16,32768,1,9,bootstrap,18240086.27,38853.073,5,7866551213,
 lattigo,boot16-sparse,16,32768,1,9,btp_keygen,40562222.104,0.0,1,7866551213,16376.7,25,5,GOMAXPROCS=4,results_boot_lattigo_sparse_robustness.csv,robustness
 lattigo,boot16-sparse,16,32768,1,9,us_per_level,2280010.784,4856.634,5,7866551213,16376.7,25,5,GOMAXPROCS=4,results_boot_lattigo_sparse_robustness.csv,robustness
 lattigo,boot16-sparse,16,32768,1,9,precision_bits,27.331,24.884,1,7866551213,16376.7,25,5,GOMAXPROCS=4,results_boot_lattigo_sparse_robustness.csv,robustness
-openfhe,boot16-sparse-rc,16,32768,1,9,bootstrap,25165523.867,1137000.318,5,10587078656,14724.1,26,9,OMP_NUM_THREADS=4,results_boot_openfhe_sparse_robustness.csv,robustness
-openfhe,boot16-sparse-rc,16,32768,1,9,btp_setup,6125055.308,0.0,1,10587078656,14724.1,26,9,OMP_NUM_THREADS=4,results_boot_openfhe_sparse_robustness.csv,robustness
-openfhe,boot16-sparse-rc,16,32768,1,9,btp_keygen,27135835.165,0.0,1,10587078656,14724.1,26,9,OMP_NUM_THREADS=4,results_boot_openfhe_sparse_robustness.csv,robustness
-openfhe,boot16-sparse-rc,16,32768,1,9,us_per_level,3145690.483,142125.04,5,10587078656,14724.1,26,9,OMP_NUM_THREADS=4,results_boot_openfhe_sparse_robustness.csv,robustness
-openfhe,boot16-sparse-rc,16,32768,1,9,precision_bits,18.686,16.1,1,10587078656,14724.1,26,9,OMP_NUM_THREADS=4,results_boot_openfhe_sparse_robustness.csv,robustness
+openfhe,boot16-sparse-rc,16,32768,1,9,bootstrap,24480043.283,143629.508,5,10586816512,14724.1,26,9,OMP_NUM_THREADS=4,results_boot_openfhe_sparse_robustness.csv,robustness
+openfhe,boot16-sparse-rc,16,32768,1,9,btp_setup,6158295.923,0.0,1,10586816512,14724.1,26,9,OMP_NUM_THREADS=4,results_boot_openfhe_sparse_robustness.csv,robustness
+openfhe,boot16-sparse-rc,16,32768,1,9,btp_keygen,26986490.948,0.0,1,10586816512,14724.1,26,9,OMP_NUM_THREADS=4,results_boot_openfhe_sparse_robustness.csv,robustness
+openfhe,boot16-sparse-rc,16,32768,1,9,us_per_level,3060005.41,17953.689,5,10586816512,14724.1,26,9,OMP_NUM_THREADS=4,results_boot_openfhe_sparse_robustness.csv,robustness
+openfhe,boot16-sparse-rc,16,32768,1,9,precision_bits,18.697,15.969,1,10586816512,14724.1,26,9,OMP_NUM_THREADS=4,results_boot_openfhe_sparse_robustness.csv,robustness

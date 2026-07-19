@@ -85,11 +85,23 @@ go run lattigo_ks_bench.go -reps 30
 | 스크립트 | 입력 | CSV 출력 | PNG 출력 |
 |---|---|---|---|
 | `aggregate.py` | 8-op | `plots/8op/results_combined*.csv` | `plots/8op/` |
-| `aggregate_boot.py` | 부트스트래핑 | `results_boot_combined.csv` | *(현재 PNG 생성 없음)* |
-| `aggregate_ks.py` | key-switch 단건 | `results_ks_combined.csv` | *(현재 PNG 생성 없음)* |
+| `aggregate_boot.py` | 부트스트래핑 | `results_boot_combined.csv` | `plots/boot/` |
+| `aggregate_ks.py` | key-switch 단건 | `results_ks_combined.csv` | `plots/ks/` |
 
-`plots/boot/`, `plots/ks/`는 생성해 두었으나 아직 비어 있다 — 두 스크립트는 콘솔 표와
-병합 CSV만 만든다. 플롯을 추가할 때 이 경로를 쓸 것.
+### 발표용 차트
+
+| 파일 | 무엇을 보여주나 |
+|---|---|
+| `plots/ks/plot_ks_reversal.png` | **핵심 그림.** 단건 rot1 vs 전체 부트스트래핑을 Lattigo=1.0으로 정규화. mt에서 OpenFHE가 기준선 *아래*(0.82x, 더 빠름)였다가 부트스트래핑에서 *위*(1.59x, 더 느림)로 넘어가는 역전이 한눈에 보인다 |
+| `plots/boot/plot_boot_summary.png` | 4조건 지연시간(초), 에러바=표본표준편차. 정밀도는 축이 아니라 막대 위 회색 라벨 |
+| `plots/boot/plot_boot_density.png` | 조밀/희소 2×2. 희소 대조군이 단일 변수 실험이 아니라는 경고 배너 포함 |
+
+차트 규칙:
+- 색은 **엔티티 고정**(lattigo=파랑 `#0072B2`, openfhe=주황 `#D55E00`), 순위에 따라 바뀌지 않는다.
+  Okabe-Ito 색맹 안전 조합이며 6검사 통과(CVD ΔE=21.9 / 일반시야 ΔE=31.2 / 대비 ≥3:1).
+- **정밀도를 지연시간과 같은 축에 놓지 않는다.** 단위가 다른 두 측정을 한 축에 올리면
+  두 스케일의 정렬이 임의라 없는 상관을 만들어낸다. 반드시 텍스트 라벨로만 병기한다.
+- 차트 텍스트는 **영문** — 이 환경에 한글 폰트가 없어 한글은 두부박스로 렌더된다.
 
 `aggregate.py`는 세 가지를 **거부(sys.exit)** 한다. 셋 다 "조용한 통과를 막는다"는 같은 원칙이다:
 
@@ -149,11 +161,12 @@ go run lattigo_ks_bench.go -reps 30
 | 파일 | 역할 |
 |---|---|
 | `results_boot_lattigo_sparse_robustness.csv` | Lattigo 희소 프리셋 `N16QP1546H192H32`. 18.240 s / 27.33비트 |
-| `results_boot_openfhe_sparse_robustness.csv` | OpenFHE `SPARSE_TERNARY`. 깊이 21→17. 25.17 s / 18.69비트 |
+| `results_boot_openfhe_sparse_robustness.csv` | OpenFHE `SPARSE_TERNARY`. 깊이 21→17. 24.48 s / 18.70비트 (warmup 3 재측정) |
 | `results_boot_openfhe_fixedmanual_footnote.csv` | FIXEDMANUAL 단일 샘플 각주용. 27.53 s / 10.08비트 |
 
-희소 대 희소로 짝을 맞추면 격차 1.41배로, 조밀 조건의 1.59배와 큰 차이 없다
+희소 대 희소로 짝을 맞추면 격차 1.34배로, 조밀 조건의 1.59배와 큰 차이 없다
 → Lattigo 우위는 비밀키 분포에서 오는 것이 아니다.
+정밀도는 두 라이브러리에서 **반대 방향**으로 움직인다 (OpenFHE +6.4비트, Lattigo −2.4비트).
 단 Lattigo 희소는 프리셋 전체 교체(scale 2^40 등)라 OpenFHE의 단일 변수 실험과 성격이 다르다.
 
 ### 초기 파일럿 / 중간 산출 (인용 비권장)
