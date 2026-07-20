@@ -163,6 +163,7 @@ go run lattigo_ks_bench.go -reps 30
 | `results_boot_lattigo_sparse_robustness.csv` | Lattigo 희소 프리셋 `N16QP1546H192H32`. 18.240 s / 27.33비트 |
 | `results_boot_openfhe_sparse_robustness.csv` | OpenFHE `SPARSE_TERNARY`. 깊이 21→17. 24.48 s / 18.70비트 (warmup 3 재측정) |
 | `results_boot_openfhe_fixedmanual_footnote.csv` | FIXEDMANUAL 단일 샘플 각주용. 27.53 s / 10.08비트 |
+| `results_boot_openfhe_authorbench_A.csv` | **저자 벤치 A행의 변형** (원본 아님). 41.61 s / 7.42비트, out_level=10. `numDigits` 미지정 + `HEStd_NotSet`이라 원본 재현 불가. 자세한 근거는 CSV 상단 주석과 `BOOTSTRAP_TASK.md`의 「저자 벤치 조사」 |
 
 희소 대 희소로 짝을 맞추면 격차 1.34배로, 조밀 조건의 1.59배와 큰 차이 없다
 → Lattigo 우위는 비밀키 분포에서 오는 것이 아니다.

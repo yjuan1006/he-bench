@@ -186,6 +186,30 @@ int main(int argc, char** argv) {
     // sparse는 *민감도 검증 전용*이다 — Lattigo가 조밀키(H=32768)를 쓰는 상태에서
     // OpenFHE만 희소키로 돌리면 비밀키 분포가 비정합이 되어 본 비교로 쓸 수 없다.
     std::string skdSel = "uniform";
+    // --- 저자 벤치(benchmark/src/ckks-bootstrapping.cpp) 설정 재현용 플래그 ---
+    // 기본값은 우리 boot16 그대로. 아래 값을 바꾸면 저자 테이블의 한 행을 재현할 수 있다.
+    int budgetC2S = 4, budgetS2C = 3;  // 저자 벤치 2^16/2^15 조밀 행들은 {3,3}
+    int iters = 1;                     // Meta-BTS 반복. 저자 벤치 조밀 행은 대부분 2
+    // numDigits (= dnum, SetNumLargeDigits): 0이면 자동. 저자 벤치 조밀 행들은 10~16을 명시한다.
+    // 이 값은 *교환 관계*를 조절하는 손잡이다 — 공짜로 좋아지는 쪽이 없다:
+    //
+    //   dnum ↑ (예: 15)   digit 하나가 작아짐(towersPerPart 2)
+    //                     → P limb 감소(10→2), 연산 체인 경량화(limb QP 40→32)
+    //                     → key-switch 오차 감소 (정밀도에 유리)
+    //                     → 그러나 회전키 개수가 dnum에 비례해 늘어 keygen 폭증
+    //   dnum ↓ (자동 3)   digit 하나가 커짐(towersPerPart 10)
+    //                     → P limb 증가, 체인 무거워짐, key-switch 오차 증가
+    //                     → 대신 keygen 저렴
+    //
+    // 실측 근거 (둘 다 dcrtBits 54 / firstMod 60 / {3,3} / lvlsAfter 9 / iters 1):
+    //   dnum=3(자동) : limb QP 40, keygen  18.1 s, bootstrap 41.6 s, 정밀도 7.42비트  [완주]
+    //   dnum=15      : limb QP 32, keygen  9분 초과로 완주 실패(2회 시도)
+    //                  → bootstrap·정밀도는 미측정. 체인 구조만 확인됨.
+    //
+    // 주의: dnum=15 쪽의 지연시간·정밀도는 *측정하지 않았다*. 위 "정밀도에 유리" 서술은
+    // key-switch 오차가 digit 크기에 비례한다는 구조적 근거에 따른 추정이며 실측이 아니다.
+    int numDigits = 0;
+    std::string presetLabel = "boot16";
 
     for (int i = 1; i < argc; i++) {
         std::string a = argv[i];
@@ -205,6 +229,16 @@ int main(int argc, char** argv) {
             scaleMod = std::stoi(argv[++i]);
         else if (a == "-skd" && i + 1 < argc)
             skdSel = argv[++i];  // uniform | sparse (sparse는 민감도 검증 전용)
+        else if (a == "-budget" && i + 2 < argc) {
+            budgetC2S = std::stoi(argv[++i]);
+            budgetS2C = std::stoi(argv[++i]);
+        }
+        else if (a == "-iters" && i + 1 < argc)
+            iters = std::stoi(argv[++i]);
+        else if (a == "-numdigits" && i + 1 < argc)
+            numDigits = std::stoi(argv[++i]);
+        else if (a == "-preset" && i + 1 < argc)
+            presetLabel = argv[++i];
     }
 
     // -scaling: 기존 8-op 벤치는 rescale 명시 측정을 위해 FIXEDMANUAL을 쓴다.
@@ -227,7 +261,8 @@ int main(int argc, char** argv) {
     const uint32_t logN = 16;
     const uint32_t ringDimReq = 1u << logN;
     const uint32_t numSlots = ringDimReq / 2;  // 32768
-    std::vector<uint32_t> levelBudget = {4, 3};
+    std::vector<uint32_t> levelBudget = {static_cast<uint32_t>(budgetC2S),
+                                        static_cast<uint32_t>(budgetS2C)};
     std::vector<uint32_t> bsgsDim = {0, 0};  // 자동
 
     // 깊이 하드코딩 금지: GetBootstrapDepth 반환값은 OpenFHE 버전에 따라 다르다.
@@ -240,9 +275,15 @@ int main(int argc, char** argv) {
                   << "*** Lattigo는 조밀키 H=32768를 쓴다. 본 비교 결과로 인용하지 말 것. ***\n\n";
     }
     uint32_t btpDepth = FHECKKSRNS::GetBootstrapDepth(levelBudget, skd);
-    uint32_t depth = static_cast<uint32_t>(levels) + btpDepth;
+    // 저자 벤치와 동일한 깊이 공식:
+    //   depth = lvlsAfter + GetBootstrapDepth(levelBudget, skd) + (iters - 1)
+    uint32_t depth = static_cast<uint32_t>(levels) + btpDepth
+                     + static_cast<uint32_t>(iters - 1);
 
-    std::cerr << "[boot16] GetBootstrapDepth({4,3}, "
+    std::cerr << "[" << presetLabel << "] levelBudget={" << budgetC2S << "," << budgetS2C
+              << "}  iters=" << iters << "  numDigits="
+              << (numDigits > 0 ? std::to_string(numDigits) : std::string("auto")) << "\n";
+    std::cerr << "[boot16] GetBootstrapDepth({" << budgetC2S << "," << budgetS2C << "}, "
               << (sparse ? "SPARSE_TERNARY" : "UNIFORM_TERNARY") << ") = " << btpDepth << "\n"
               << "[boot16] multiplicativeDepth = " << levels << " + " << btpDepth << " = " << depth
               << "\n"
@@ -259,6 +300,7 @@ int main(int argc, char** argv) {
     params.SetScalingModSize(scaleMod);
     params.SetFirstModSize(firstMod);
     params.SetScalingTechnique(scaling);
+    if (numDigits > 0) params.SetNumLargeDigits(static_cast<uint32_t>(numDigits));
     params.SetMultiplicativeDepth(depth);
 
     CryptoContext<DCRTPoly> cc = GenCryptoContext(params);
@@ -271,11 +313,45 @@ int main(int argc, char** argv) {
     uint32_t ringDim = cc->GetRingDimension();
     LimbCount limbs = dumpChain(cc, depth);
 
+    // --- 증분 CSV 기록 ---
+    // 백그라운드 실행이 세션 종료로 잘리는 일이 반복돼(3회), 측정이 끝난 뒤 한 번에 쓰는
+    // 방식으로는 중단 시 아무것도 남지 않았다. 그래서 각 단계가 끝나는 즉시 append + flush 한다.
+    // 헤더는 파일이 없거나 비었을 때만 쓴다(이어붙일 때 헤더가 중복되지 않도록).
+    std::string threadMech = "OMP_NUM_THREADS=" + std::to_string(omp_get_max_threads());
+    bool needHeader = true;
+    {
+        std::ifstream probe(out, std::ios::ate);
+        if (probe.good() && probe.tellg() > 0) needHeader = false;
+    }
+    std::ofstream csv(out, std::ios::app);
+    if (needHeader) {
+        if (sparse) {
+            csv << "# 비밀키 분포 비정합 - robustness check 전용. 본 비교 결과 아님.\n"
+                << "# OpenFHE=SPARSE_TERNARY, Lattigo=dense H=32768. 확정 설계 결정 1 위반 상태.\n";
+        }
+        csv << "library,preset,logN,numSlots,in_level,out_level,op,mean_us,std_us,reps,key_bytes,"
+               "peak_rss_mb,limbs_q,limbs_p,thread_mechanism\n";
+    }
+    csv << std::fixed;
+
+    // 아직 측정 전인 값들. 행을 쓰는 시점에 알려진 것만 채우고, 미상은 -1로 남긴다.
+    double keyBytesApprox = 0.0;
+    int inLevel = -1, outLevel = -1;
+    auto row = [&](const std::string& op, double m, double sd_, int r) {
+        csv << "openfhe," << (sparse ? "boot16-sparse-rc" : presetLabel) << "," << logN << ","
+            << numSlots << "," << inLevel << "," << outLevel << "," << op << ","
+            << std::setprecision(3) << m << "," << sd_ << "," << r << ","
+            << static_cast<long long>(keyBytesApprox) << "," << std::setprecision(1)
+            << peakRSSMB() << "," << limbs.q << "," << limbs.p << "," << threadMech << "\n";
+        csv.flush();  // 중단돼도 여기까지는 디스크에 남는다
+    };
+
     // --- btp_setup: 사전계산 (OpenFHE만) ---
     auto t0 = Clock::now();
     cc->EvalBootstrapSetup(levelBudget, bsgsDim, numSlots);
     double setupUS = elapsedUS(t0, Clock::now());
     std::cerr << "[boot16] EvalBootstrapSetup = " << setupUS / 1e6 << " s\n";
+    row("btp_setup", setupUS, 0.0, 1);
 
     // --- btp_keygen: 키 생성 ---
     // 키 크기: OpenFHE에는 Lattigo의 EvaluationKeys::BinarySize()에 대응하는 API가 없다.
@@ -287,13 +363,14 @@ int main(int argc, char** argv) {
     cc->EvalBootstrapKeyGen(keys.secretKey, numSlots);
     double keygenUS = elapsedUS(t0, Clock::now());
     double rssAfter = currentRSSMB();
-    double keyBytesApprox = (rssAfter - rssBefore) * 1024.0 * 1024.0;
+    keyBytesApprox = (rssAfter - rssBefore) * 1024.0 * 1024.0;
     if (keyBytesApprox < 0) keyBytesApprox = 0;
 
     std::cerr << "[boot16] keygen = " << keygenUS / 1e6 << " s\n"
               << "[boot16] key_bytes = " << static_cast<long long>(keyBytesApprox) << " ("
               << (rssAfter - rssBefore) << " MB) — RSS 증가분 기반 *근사*, "
               << "OpenFHE에는 정확한 키 크기 API가 없음\n";
+    row("btp_keygen", keygenUS, 0.0, 1);
 
     // --- 입력 준비 ---
     // 모든 슬롯 0.5 (기존 8-op 벤치와 동일).
@@ -311,25 +388,27 @@ int main(int argc, char** argv) {
     // 타이밍 범위는 EvalBootstrap 호출 1회뿐. 입력 ct 생성은 밖에서.
     for (int i = 0; i < warmup; i++) {
         auto ct = newCT();
-        cc->EvalBootstrap(ct);
+        cc->EvalBootstrap(ct, static_cast<uint32_t>(iters));
     }
 
     // 레벨 방향: OpenFHE GetLevel()은 소모량(0→max), Lattigo는 잔량(max→0).
     // CSV에는 Lattigo 기준 잔량으로 통일 — level = maxLevel - GetLevel().
     int maxLevel = static_cast<int>(depth);
-    int inLevel = 0, outLevel = 0;
 
     std::vector<double> ts(reps);
     for (int i = 0; i < reps; i++) {
         auto ct = newCT();
         inLevel = maxLevel - static_cast<int>(ct->GetLevel());
         auto s = Clock::now();
-        auto ctOut = cc->EvalBootstrap(ct);
+        auto ctOut = cc->EvalBootstrap(ct, static_cast<uint32_t>(iters));
         ts[i] = elapsedUS(s, Clock::now());
         outLevel = maxLevel - static_cast<int>(ctOut->GetLevel());
         std::cerr << "  rep " << (i + 1) << "/" << reps << "  " << ts[i] << " us ("
                   << ts[i] / 1e6 << " s)  in_level=" << inLevel << " out_level=" << outLevel
                   << "\n";
+        // 개별 표본을 즉시 기록. 중단되더라도 여기까지의 rep은 남아 평균을 낼 수 있다.
+        // (집계 행 op="bootstrap"과 구분하기 위해 op="bootstrap_rep", reps 칼럼엔 회차 번호)
+        row("bootstrap_rep", ts[i], 0.0, i + 1);
     }
 
     auto [mean, sd] = meanStd(ts);
@@ -347,7 +426,7 @@ int main(int argc, char** argv) {
 
     Plaintext ptPrec = cc->MakeCKKSPackedPlaintext(want, 1, depth - 1, nullptr, numSlots);
     auto ctPrec    = cc->Encrypt(keys.publicKey, ptPrec);
-    auto ctPrecOut = cc->EvalBootstrap(ctPrec);
+    auto ctPrecOut = cc->EvalBootstrap(ctPrec, static_cast<uint32_t>(iters));
 
     // 기준선: 부트스트래핑 *없이* 암호화→복호화만. 이 값이 나쁘면 검증 코드 문제,
     // 좋은데 부트스트래핑 후만 나쁘면 부트스트래핑/스케일 관리 문제로 분리된다.
@@ -400,32 +479,12 @@ int main(int argc, char** argv) {
     double perLevelMean = mean / levelGain;
     double perLevelSD = sd / levelGain;
 
-    double peak = peakRSSMB();
-
-    // thread_mechanism: 라벨이 아니라 런타임 실측값(omp_get_max_threads)을 기록한다.
-    // OpenFHE는 OpenMP를 쓰므로 OMP_NUM_THREADS가 코어 제한 수단이다
-    // (Go/Lattigo에는 무효 — 그쪽은 GOMAXPROCS를 쓴다).
-    std::string threadMech = "OMP_NUM_THREADS=" + std::to_string(omp_get_max_threads());
     std::cerr << "  thread_mechanism=" << threadMech << "\n";
 
-    // --- CSV 기록 ---
-    std::ofstream csv(out);
-    if (sparse) {
-        csv << "# 비밀키 분포 비정합 - robustness check 전용. 본 비교 결과 아님.\n"
-            << "# OpenFHE=SPARSE_TERNARY, Lattigo=dense H=32768. 확정 설계 결정 1 위반 상태.\n";
-    }
-    csv << "library,preset,logN,numSlots,in_level,out_level,op,mean_us,std_us,reps,key_bytes,"
-           "peak_rss_mb,limbs_q,limbs_p,thread_mechanism\n";
-    csv << std::fixed;
-    auto row = [&](const std::string& op, double m, double s, int r) {
-        csv << "openfhe," << (sparse ? "boot16-sparse-rc" : "boot16") << "," << logN << "," << numSlots << "," << inLevel << "," << outLevel
-            << "," << op << "," << std::setprecision(3) << m << "," << s << "," << r << ","
-            << static_cast<long long>(keyBytesApprox) << "," << std::setprecision(1) << peak
-            << "," << limbs.q << "," << limbs.p << "," << threadMech << "\n";
-    };
+    // --- 집계 행 기록 ---
+    // 단계별 행(btp_setup / btp_keygen / bootstrap_rep)은 이미 즉시 기록됐다.
+    // 여기서는 전 rep을 다 마친 뒤에야 계산 가능한 집계·정밀도 행만 덧붙인다.
     row("bootstrap", mean, sd, reps);
-    row("btp_setup", setupUS, 0.0, 1);
-    row("btp_keygen", keygenUS, 0.0, 1);
     row("us_per_level", perLevelMean, perLevelSD, reps);
     // precision_bits 행은 μs가 아니라 *비트*를 담는다 (스키마 고정이라 컬럼 재사용):
     //   mean_us = 평균 정밀도 비트 = -log2(mean|err|)
@@ -435,7 +494,7 @@ int main(int argc, char** argv) {
 
     std::cerr << "\n[boot16] ringDim=" << ringDim << "  bootstrap mean=" << mean << " us ("
               << mean / 1e6 << " s)  sd=" << sd << "  us_per_level=" << perLevelMean
-              << "  peakRSS=" << peak << " MB\n"
+              << "  peakRSS=" << peakRSSMB() << " MB\n"
               << "wrote " << out << "\n";
     return 0;
 }

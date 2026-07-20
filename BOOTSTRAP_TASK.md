@@ -280,6 +280,89 @@ Lattigo는 bootstrapping 파라미터 기준으로 기록한다 — 부트스트
 
 ---
 
+## 저자 벤치 조사 — 왜 직접 비교하지 않았나
+
+"우리가 OpenFHE 설정을 불리하게 잡은 것 아닌가"라는 의문을 확인하려고 **양쪽 라이브러리의
+공식 벤치마크를 모두 조사**했다. 결론: 직접 비교 대상이 아니며, 저자 설정 계열이 오히려 더
+느리고 부정확했다.
+
+### 무엇이 있었나
+
+| | Lattigo | OpenFHE |
+|---|---|---|
+| 위치 | `circuits/ckks/bootstrapping/evaluator_benchmarks_test.go` | `benchmark/src/ckks-bootstrapping.cpp` |
+| 형태 | 검증 프리셋 8종 (`DefaultParametersDense/Sparse`) | 설정 테이블 17행 |
+| 정밀도 보증 | **프리셋마다 문서화** (15.4~32.1비트, 실패확률 2^-138.7) | **문서화 없음** |
+| 측정 대상 | `RunParallel` 동시 처리량 | `Iterations(4)`, 초 단위 |
+
+### Lattigo 벤치를 쓰지 않은 이유
+
+1. **프리셋이 다르다.** `BenchmarkConcurrentBootstrap`은 `DefaultParametersDense[0]`
+   = `N16QP1767H32768H32`를 쓴다. 우리 `boot16`은 `[1]` = `N16QP1788H32768H32`다.
+   잔여 레벨 13 대 9, scale 2^40 대 2^45, 문서상 정밀도 23.8 대 29.8비트로 전부 다르다.
+2. **지표가 다르다.** `RunParallel` 동시 처리량이지 단건 지연시간이 아니다.
+   우리는 단건을 재고, `GOMAXPROCS` 실험으로 단건에 내부 병렬이 없음을 이미 확인했다.
+3. **코드에 의심스러운 점이 있다** (코드 리딩 기준, 미검증):
+   `eval`과 `ct1`을 `RunParallel` 밖에서 1개씩 만들어 모든 고루틴이 공유한다.
+   이 패키지에 `ShallowCopy`가 없고 `Evaluator`는 `xPow2N1` 등 가변 버퍼를 들고 있어
+   데이터 경합 소지가 있다. 또 `NewCiphertext(params,1,0)`은 암호화되지 않은 0이라
+   정밀도 검증도 없다.
+   → `-race`로 3회 확인을 시도했으나 **전부 세션 종료로 중단**되어 검증하지 못했다.
+   재현 프로브는 `racecheck/`에 남겨 두었다(작은 프리셋으로 패턴만 복제).
+   **경합 여부는 여전히 추정이며 사실로 기록하지 말 것.**
+
+### OpenFHE 벤치를 쓰지 않은 이유
+
+저자 테이블의 2^16/2^15 조밀 행 5개는 우리와 여섯 항목 중 다섯이 다르다
+(`dcrtBits` 50~54, `firstMod` 57~60, `levelBudget {3,3}`, `iters` 대부분 2,
+`numDigits` 10~16 명시, `HEStd_128_classic`).
+
+그중 가장 가까운 A행
+(`dcrtBits 54 / firstMod 60 / {3,3} / lvlsAfter 9 / iters 1 / FLEXIBLEAUTO`)을
+우리 하네스로 실측했다 → `results_boot_openfhe_authorbench_A.csv`
+
+| | 본 결과 boot16 | 저자 A행 변형 | Lattigo boot16 |
+|---|---|---|---|
+| bootstrap | 38.098 s | **41.605 s ± 0.128** | 23.910 s |
+| 정밀도 | 12.34비트 | **7.42비트** (최악 4.40) | 29.74비트 |
+| out_level | 9 | **10** | 9 |
+| limb QP | 40 | 40 | 33 |
+| logQP | 2371 | 2226 | 1788 |
+| btp_keygen | 31.1 s | 18.1 s | 57.9 s |
+
+**저자 설정 계열이 더 느리고 정밀도도 더 낮았다.** 즉 "OpenFHE 설정을 불리하게 잡아서
+결과가 나빴다"는 가설은 이 측정으로는 지지되지 않는다.
+
+다만 이 값은 **저자 A행의 변형**이지 원본이 아니다. 두 가지가 다르다:
+
+- `numDigits` 미지정(자동 dnum=3). 원본은 15. → 아래 dnum 교환 관계 참조.
+  `numDigits=15`로 2회 시도했으나 keygen이 9분을 넘겨 완주 실패
+  (부분 결과 `archive/authorbench_A_dnum15_partial.csv`).
+- `SecurityLevel = HEStd_NotSet`. 원본은 `HEStd_128_classic`.
+  **링 차원을 65536으로 강제해 Lattigo와 맞추려면 불가피하다.**
+
+**이 두 번째 항목 때문에 `numDigits`를 넣더라도 원본 온전 재현은 애초에 불가능하다.**
+게다가 `out_level`이 10이라 본 실험(1→9)과 복원 레벨이 달라 나란히 놓을 수도 없다.
+그래서 B행(`iters 2`)은 진행하지 않았다 — 같은 한계가 그대로 남기 때문이다.
+
+### dnum(`numDigits`) 교환 관계
+
+조사 중 드러난 별개 사실. 공짜로 좋아지는 쪽이 없는 손잡이다:
+
+| | dnum ↑ (15) | dnum ↓ (자동 3) |
+|---|---|---|
+| towersPerPart | 2 | 10 |
+| limb P / QP | 2 / **32** | 10 / **40** |
+| 연산 체인 | 가벼움 | 무거움 |
+| key-switch 오차 | 작음 (정밀도 유리) | 큼 |
+| **keygen** | **9분 초과** | **18.1 s** |
+
+실측 근거(둘 다 `dcrtBits 54 / firstMod 60 / {3,3} / lvlsAfter 9 / iters 1`):
+dnum 3은 완주해 bootstrap 41.6 s / 정밀도 7.42비트를 얻었고,
+dnum 15는 체인 구조만 확인되고 **지연시간·정밀도는 미측정**이다.
+"dnum이 크면 정밀도에 유리"는 key-switch 오차가 digit 크기에 비례한다는 구조적 근거에
+따른 추정이며 실측이 아니다.
+
 ## 완료 조건
 
 1. 두 실행파일이 `-reps 1`로 정상 종료하고 CSV를 남긴다.

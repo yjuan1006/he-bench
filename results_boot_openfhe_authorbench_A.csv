@@ -1,0 +1,24 @@
+# 저자 벤치 A행의 *변형*이다 — 원본 재현이 아니다. 본 결과(boot16)와 나란히 놓지 말 것.
+# 출처: OpenFHE benchmark/src/ckks-bootstrapping.cpp 의 설정 테이블 1행
+#   원본: ringDim 2^16, slots 2^15, dcrtBits 54, firstMod 60, numDigits 15,
+#         lvlsAfter 9, iters 1, levelBudget {3,3}, UNIFORM_TERNARY, FLEXIBLEAUTO,
+#         SecurityLevel HEStd_128_classic
+# 이 측정에서 원본과 다른 점 2가지:
+#   (1) numDigits 미지정(자동 dnum=3). 원본은 15. → limb QP 32 대신 40, key-switch 오차 증가.
+#       numDigits=15로도 2회 시도했으나 keygen이 9분을 넘겨 세션 종료로 완주 실패
+#       (부분 결과: archive/authorbench_A_dnum15_partial.csv).
+#   (2) SecurityLevel = HEStd_NotSet. 원본은 HEStd_128_classic.
+#       링 차원을 65536으로 강제해 Lattigo와 맞추려면 불가피하다.
+# → (2) 때문에 numDigits를 넣더라도 원본 온전 재현은 애초에 불가능하다.
+# 또한 out_level=10이라 본 실험(1->9)과 복원 레벨이 달라 절대값 비교 대상이 아니다.
+library,preset,logN,numSlots,in_level,out_level,op,mean_us,std_us,reps,key_bytes,peak_rss_mb,limbs_q,limbs_p,thread_mechanism
+openfhe,boot16-authorbench,16,32768,-1,-1,btp_setup,9404535.412,0.000,1,0,6054.6,30,10,OMP_NUM_THREADS=4
+openfhe,boot16-authorbench,16,32768,-1,-1,btp_keygen,18145712.403,0.000,1,7030710272,12757.6,30,10,OMP_NUM_THREADS=4
+openfhe,boot16-authorbench,16,32768,1,10,bootstrap_rep,41703791.006,0.000,1,7030710272,13565.8,30,10,OMP_NUM_THREADS=4
+openfhe,boot16-authorbench,16,32768,1,10,bootstrap_rep,41408871.952,0.000,2,7030710272,13565.8,30,10,OMP_NUM_THREADS=4
+openfhe,boot16-authorbench,16,32768,1,10,bootstrap_rep,41731856.590,0.000,3,7030710272,13565.8,30,10,OMP_NUM_THREADS=4
+openfhe,boot16-authorbench,16,32768,1,10,bootstrap_rep,41608367.974,0.000,4,7030710272,13565.8,30,10,OMP_NUM_THREADS=4
+openfhe,boot16-authorbench,16,32768,1,10,bootstrap_rep,41574415.423,0.000,5,7030710272,13565.8,30,10,OMP_NUM_THREADS=4
+openfhe,boot16-authorbench,16,32768,1,10,bootstrap,41605460.589,127734.263,5,7030710272,13567.3,30,10,OMP_NUM_THREADS=4
+openfhe,boot16-authorbench,16,32768,1,10,us_per_level,4622828.954,14192.696,5,7030710272,13567.3,30,10,OMP_NUM_THREADS=4
+openfhe,boot16-authorbench,16,32768,1,10,precision_bits,7.423,4.401,1,7030710272,13567.3,30,10,OMP_NUM_THREADS=4

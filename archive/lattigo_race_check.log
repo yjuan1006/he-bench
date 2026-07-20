@@ -1,0 +1,1 @@
+[racecheck] preset[3]  logN=15  residual limbs Q=5 P=2  logQP=276  GOMAXPROCS=2
