@@ -2,6 +2,33 @@
 
 CKKS 연산의 **암호문 1개 기준** latency를 OpenFHE(C++)와 Lattigo(Go)에서 측정·비교한다.
 
+## 측정 환경
+
+**dku16c** (현재 baseline, 파일 태그 `_dku16c`) — `ENV_dku16c.txt` 참조.
+
+| 항목 | 값 |
+|------|-----|
+| CPU | Intel Xeon Processor (SapphireRapids), x86_64 |
+| 코어 | 16 physical (`Thread(s) per core: 1` — **SMT 없음**), 16 vCPU |
+| 벡터 확장 | AVX-512 지원 (`avx512f/dq/bw/vl/vbmi2/vnni …`) |
+| RAM | 62 GB |
+| OS / 툴체인 | Ubuntu 24.04.3 · g++ 13.3 · cmake 3.28.3 · Go 1.24.5 |
+| OpenFHE | v1.5.1 소스 빌드 (Release, shared, OpenMP=ON, **NATIVEOPT=OFF, INTEL_HEXL=OFF**) |
+| Lattigo | v6.2.0 |
+
+> HEXL은 공정 비교(같은 빌드 옵션·다른 하드웨어)를 위해 AVX-512 지원 머신에서도 **OFF**로 둔다.
+> 이전 baseline은 **epyc4t**(AMD EPYC 7643, 2물리코어×SMT2 = 4스레드), 파일 태그 `_epyc4t`.
+
+### 결과 파일 규칙
+
+`results_{lib}_{preset}_{1t|mt}_{machine}.csv` — `lib`∈{openfhe,lattigo}, `preset`∈{small,medium,large}.
+- `mt` = 멀티스레드(기본): OpenFHE 기본 OpenMP / Lattigo 기본
+- `1t` = 싱글스레드: OpenFHE `OMP_NUM_THREADS=1` / Lattigo `GOMAXPROCS=1`
+  (Go에는 `OMP_NUM_THREADS`가 무효이므로 반드시 `GOMAXPROCS=1`)
+
+집계는 스레드 모드별로 분리한다(스키마에 스레드 컬럼이 없어 mt/1t를 한 파일에 합치면 충돌):
+`aggregate.py --lattigo <merged_lattigo_MODE> --openfhe <merged_openfhe_MODE> --suffix _MODE_dku16c`.
+
 ## 실행 방법
 
 ```bash
