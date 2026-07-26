@@ -146,13 +146,13 @@ int main(int argc, char **argv)
 
     ofstream fout;
     ostream &os = out_path.empty() ? cout : (fout.open(out_path), fout);
-    os << "library,machine,threads,preset,logN,level,operation,reps,mean_us,std_us\n";
+    os << "library,preset,logN,maxLevel,level,op,mean_us,std_us,reps\n";
     os << fixed << setprecision(3);
 
     auto emit = [&](int level, const char *op, Stat s) {
-        os << "seal," << machine << "," << thread_tag << "," << P->name << ","
-           << P->logN << "," << level << "," << op << "," << reps << ","
-           << s.mean_us << "," << s.std_us << "\n";
+        os << "seal," << P->name << "," << P->logN << "," << P->maxLevel << ","
+           << level << "," << op << "," << s.mean_us << "," << s.std_us << ","
+           << reps << "\n";
     };
 
     // ---- level sweep: desc = maxLevel..1 (기본), asc = 1..maxLevel ----

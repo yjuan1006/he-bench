@@ -24,8 +24,12 @@ plt.rcParams.update({
 })
 
 # Okabe-Ito 색맹 안전 팔레트 (엔티티=색). 라이브러리 2종 + op 라인 색.
-LIB_COLOR = {"lattigo": "#0072B2", "openfhe": "#D55E00"}  # 파랑 / 주황
-LIB_ORDER = ["lattigo", "openfhe"]
+LIB_COLOR = {"lattigo": "#0072B2", "openfhe": "#D55E00", "seal": "#CC79A7"}  # 파랑 / 주황 / 보라
+LIB_ORDER = ["lattigo", "openfhe", "seal"]
+LIB_LABEL = {"lattigo": "Lattigo", "openfhe": "OpenFHE", "seal": "SEAL"}
+LIB_LS = {"lattigo": "-", "openfhe": "--", "seal": ":"}
+LIB_MARKER = {"lattigo": "o", "openfhe": "s", "seal": "^"}
+
 OP_COLOR = {
     "add_cc": "#000000",
     "mul_cc": "#009E73",
@@ -97,7 +101,7 @@ def read_bench_csv(path):
     return df
 
 
-def load(lattigo_csvs, openfhe_csvs):
+def load(lattigo_csvs, openfhe_csvs, seal_csvs):
     global LIB_ORDER
     frames = []
     # Lattigo 입력은 프리셋별로 여러 파일일 수 있다(small/medium/large). 지정된 건 반드시 존재해야 함.
@@ -122,6 +126,15 @@ def load(lattigo_csvs, openfhe_csvs):
                 f"[openfhe] {path} 없음. 조용히 Lattigo 단독으로 진행하지 않는다 — "
                 f"반쪽 결과가 양쪽 결과인 것처럼 같은 파일명으로 덮어써진 사고 이력이 있다.\n"
                 f"  --openfhe 로 실제 경로를 지정할 것.{hint}")
+        frames.append(read_bench_csv(path))
+    # --- SEAL 입력 가드 --- (OpenFHE 가드와 동일 원칙: 조용한 반쪽 실행 금지)
+    if not seal_csvs:
+        sys.exit("[seal] --seal 미지정. 조용히 2자 비교로 진행하지 않는다.")
+    for path in seal_csvs:
+        if not os.path.exists(path):
+            avail = sorted(glob.glob("results_seal*.csv"))
+            hint = ("\n  현재 있는 SEAL CSV: " + ", ".join(avail)) if avail else ""
+            sys.exit(f"[seal] {path} 없음. 3자 비교인데 조용히 2자로 진행하지 않는다.{hint}")
         frames.append(read_bench_csv(path))
     df = pd.concat(frames, ignore_index=True)
     # 실제 존재하는 라이브러리만 남겨 팬텀 openfhe 열/범례/막대를 제거(정규 순서 유지).
@@ -152,8 +165,9 @@ def write_combined(df):
 
 def console_summary(df):
     # 각 프리셋의 maxLevel에서 라이브러리별 mean_us 비교 + 비율.
-    both = "lattigo" in LIB_ORDER and "openfhe" in LIB_ORDER
-    header = "Lattigo vs OpenFHE" if both else " / ".join(LIB_ORDER)
+    # LIB_ORDER는 실제 데이터에 존재하는 라이브러리만 담고 있다(load에서 필터).
+    # 하드코딩하면 3자 비교인데 제목이 2자로 남는 사고가 난다.
+    header = " vs ".join(LIB_LABEL[l] for l in LIB_ORDER)
     print(f"\n=== op latency @ maxLevel (mean μs) — {header} ===")
     for preset in PRESET_ORDER:
         sub = df[df["preset"] == preset]
@@ -164,10 +178,14 @@ def console_summary(df):
         piv = top.pivot_table(index="op", columns="library", values="mean_us", observed=True)
         piv = piv.reindex(ALL_OPS)
         cols = [lib for lib in LIB_ORDER if lib in piv.columns]
-        # 두 라이브러리가 모두 있을 때만 비교 비율 열을 추가.
-        if both:
-            piv["OF/Lat"] = piv["openfhe"] / piv["lattigo"]
-            cols = cols + ["OF/Lat"]
+        # 3자 비교이므로 Lattigo를 기준(=1)으로 한 상대비 열을 붙인다.
+        # 예전 2자 시절의 OF/Lat 단일 열은 SEAL이 빠져 조용히 반쪽 표가 된다.
+        if "lattigo" in piv.columns:
+            for lib in LIB_ORDER:
+                if lib != "lattigo" and lib in piv.columns:
+                    name = f"{lib[:2].upper()}/Lat"
+                    piv[name] = piv[lib] / piv["lattigo"]
+                    cols = cols + [name]
         print(f"\n-- preset={preset}  logN={sub['logN'].iloc[0]}  level={maxL} --")
         with pd.option_context("display.float_format", lambda v: f"{v:10.1f}"):
             print(piv[cols].to_string())
@@ -200,8 +218,8 @@ def plot_level_scaling(df):
                         d["level"], mean_ms,
                         yerr=std_ms,
                         color=OP_COLOR[op],
-                        linestyle="-" if lib == "lattigo" else "--",
-                        marker="o" if lib == "lattigo" else "s",
+                        linestyle=LIB_LS[lib],
+                        marker=LIB_MARKER[lib],
                         markersize=6, linewidth=2.2,
                         capsize=2, elinewidth=0.8, ecolor=OP_COLOR[op],
                     )
@@ -221,8 +239,8 @@ def plot_level_scaling(df):
             # 범례 2개: op=색, library=선스타일 (원본 그대로).
             op_handles = [Line2D([0], [0], color=OP_COLOR[o], lw=2.5, label=o) for o in present]
             lib_handles = [
-                Line2D([0], [0], color="0.3", lw=2.5, linestyle="-", marker="o", label="lattigo"),
-                Line2D([0], [0], color="0.3", lw=2.5, linestyle="--", marker="s", label="openfhe"),
+                *[Line2D([0], [0], color="0.3", lw=2.5, linestyle=LIB_LS[l],
+                         marker=LIB_MARKER[l], label=l) for l in LIB_ORDER],
             ]
             leg1 = ax.legend(handles=op_handles, title="operation", loc="upper left")
             ax.add_artist(leg1)
@@ -283,10 +301,13 @@ def plot_summary_bars(df):
         lib_handles = [Patch(facecolor=LIB_COLOR[lib], edgecolor="black", label=lib)
                        for lib in LIB_ORDER]
         fig.legend(handles=lib_handles, title="library", loc="upper right",
-                   bbox_to_anchor=(0.998, 0.99), ncol=2, fontsize=13, title_fontsize=13)
-        fig.suptitle(f"CKKS op latency @ maxLevel · {tier} — Lattigo vs OpenFHE",
+                   bbox_to_anchor=(0.998, 1.0), ncol=3, fontsize=13, title_fontsize=13)
+        libs_txt = " vs ".join(LIB_LABEL[l] for l in LIB_ORDER)
+        fig.suptitle(f"CKKS op latency @ maxLevel · {tier} — {libs_txt}",
                      fontsize=19, x=0.4)
-        fig.tight_layout(rect=[0, 0, 1, 0.93])
+        # 범례를 축 영역 위로 완전히 빼서 서브플롯 제목을 가리지 않게 한다
+        # (3자가 되며 범례가 커져 "large" 제목을 덮었다).
+        fig.tight_layout(rect=[0, 0, 1, 0.88])
         out = out_path(f"plot_summary_{tier}{SUFFIX}.png")
         fig.savefig(out, dpi=140)
         plt.close(fig)
@@ -346,6 +367,8 @@ def main():
     # 기본값은 일부러 존재하지 않는 단일 경로로 둔다: 조건(mt/1t)을 스크립트가 임의로 고르지 않고
     # 사용자가 명시하게 하기 위함이다(가드가 걸려 실행이 멈춘다).
     ap.add_argument("--openfhe", nargs="+", default=["results_openfhe.csv"])
+    # SEAL도 동일 원칙: 기본값을 존재하지 않는 경로로 두어 사용자가 조건을 명시하게 한다.
+    ap.add_argument("--seal", nargs="+", default=["results_seal.csv"])
     ap.add_argument("--suffix", default="",
                     help="출력 파일명 접미사 (필수, 예: _mt / _1thread). "
                          "측정 조건을 파일명에 남기기 위한 것으로 생략할 수 없다.")
@@ -365,7 +388,7 @@ def main():
             "      --suffix _1thread   (OMP_NUM_THREADS=1)")
     SUFFIX = args.suffix
 
-    df = load(args.lattigo, args.openfhe)
+    df = load(args.lattigo, args.openfhe, args.seal)
     write_combined(df)
     console_summary(df)
     std_summary(df)
