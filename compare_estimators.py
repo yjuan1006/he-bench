@@ -15,9 +15,11 @@ OPS = ["add_cp", "add_cc", "mul_cp", "mul_cc", "rescale", "relin", "rot1", "mul_
 
 
 def load(path):
+    # 참조 구현 시절의 SEAL 헤더(operation)와 정규 스키마(op)를 모두 받는다.
     d = {}
     for r in csv.DictReader(open(path)):
-        d[(int(r["level"]), r["op"])] = float(r["mean_us"])
+        op = r.get("op") or r["operation"]
+        d[(int(r["level"]), op)] = float(r["mean_us"])
     return d
 
 
