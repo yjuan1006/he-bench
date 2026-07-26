@@ -18,6 +18,10 @@ Makefile
 openfhe_bench
 seal_bench
 seal_precision
+openfhe_precision
+param_dump_openfhe
+seal_probe
+seal_align
 *.o
 *.a
 *.so
