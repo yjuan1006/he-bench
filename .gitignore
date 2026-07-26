@@ -3,6 +3,9 @@ venv/
 __pycache__/
 *.pyc
 
+# --- 외부 라이브러리 소스/설치 (재생성 가능, 용량 큼) ---
+third_party/
+
 # --- CMake 빌드 산출물 ---
 CMakeCache.txt
 CMakeFiles/
@@ -13,6 +16,8 @@ Makefile
 
 # --- 컴파일 바이너리 / 오브젝트 ---
 openfhe_bench
+seal_bench
+seal_precision
 *.o
 *.a
 *.so

@@ -65,16 +65,26 @@ static Stat measure(int reps, int warmup, F &&fn)
 int main(int argc, char **argv)
 {
     string preset_name = "small", out_path = "", machine = "unknown", thread_tag = "1t";
-    int reps = 30, warmup = 3;
+    string sweep = "desc";
+    int reps = 30, warmup = 3, warmsec = 30;
 
     for (int i = 1; i < argc - 1; i++) {
         if (!strcmp(argv[i], "-preset"))  preset_name = argv[++i];
         else if (!strcmp(argv[i], "-reps"))    reps = atoi(argv[++i]);
         else if (!strcmp(argv[i], "-warmup"))  warmup = atoi(argv[++i]);
+        // 전역 웜업(초). op별 warmup 3회로는 머신이 안 데워진다 — 실측으로
+        // 실행 초반이 약 1.67배 부풀려지는 것을 확인했다. 스윕이 maxLevel에서
+        // 시작하므로 높은 레벨만 선택적으로 오염되고, 레벨-지연 기울기가
+        // 가짜로 가팔라진다. 0이면 전역 웜업 없음(오염 재현용).
+        else if (!strcmp(argv[i], "-warmsec")) warmsec = atoi(argv[++i]);
+        // 스윕 방향. asc/desc 결과가 일치하면 웜업이 충분하다는 뜻이다
+        // (오염이 남아 있으면 먼저 도는 쪽이 느리게 나오므로 방향에 따라 갈린다).
+        else if (!strcmp(argv[i], "-sweep"))   sweep = argv[++i];
         else if (!strcmp(argv[i], "-out"))     out_path = argv[++i];
         else if (!strcmp(argv[i], "-machine")) machine = argv[++i];
         else if (!strcmp(argv[i], "-threads")) thread_tag = argv[++i];
     }
+    if (sweep != "asc" && sweep != "desc") { cerr << "unknown -sweep: " << sweep << "\n"; return 1; }
 
     const Preset *P = nullptr;
     for (auto &p : PRESETS) if (p.name == preset_name) P = &p;
@@ -109,6 +119,31 @@ int main(int argc, char **argv)
     double scale = pow(2.0, P->scaleBits);
     vector<double> msg(encoder.slot_count(), 1.5);
 
+    // ---- 전역 웜업 ----
+    // 스윕 시작 전에 벽시계 기준 고정 시간 동안 대표 연산(key-switch 포함)을 돌려
+    // 머신을 정상 상태로 올린다. 측정 대상이 아니므로 결과는 버린다.
+    // 진단 출력은 stderr로 — stdout은 -out 없을 때 CSV가 나가는 통로다.
+    if (warmsec > 0) {
+        Plaintext pt_w; encoder.encode(msg, scale, pt_w);
+        Ciphertext wa, wb, wdst;
+        encryptor.encrypt(pt_w, wa);
+        encryptor.encrypt(pt_w, wb);
+        auto t_start = chrono::steady_clock::now();
+        long iters = 0;
+        while (chrono::duration<double>(chrono::steady_clock::now() - t_start).count() < warmsec) {
+            evaluator.add(wa, wb, wdst);
+            evaluator.multiply(wa, wb, wdst);
+            evaluator.relinearize_inplace(wdst, rlk);
+            evaluator.rotate_vector(wa, 1, glk, wdst);
+            iters++;
+        }
+        double el = chrono::duration<double>(chrono::steady_clock::now() - t_start).count();
+        cerr << "[warmup] " << P->name << " " << el << " s, " << iters << " iters (target "
+             << warmsec << " s)\n";
+    } else {
+        cerr << "[warmup] DISABLED (-warmsec 0)\n";
+    }
+
     ofstream fout;
     ostream &os = out_path.empty() ? cout : (fout.open(out_path), fout);
     os << "library,machine,threads,preset,logN,level,operation,reps,mean_us,std_us\n";
@@ -120,8 +155,12 @@ int main(int argc, char **argv)
            << s.mean_us << "," << s.std_us << "\n";
     };
 
-    // ---- level sweep: maxLevel .. 1 ----
-    for (int level = P->maxLevel; level >= 1; level--) {
+    // ---- level sweep: desc = maxLevel..1 (기본), asc = 1..maxLevel ----
+    vector<int> sweep_levels;
+    if (sweep == "desc") for (int l = P->maxLevel; l >= 1; l--) sweep_levels.push_back(l);
+    else                 for (int l = 1; l <= P->maxLevel; l++) sweep_levels.push_back(l);
+
+    for (int level : sweep_levels) {
         // locate the parms_id for this level
         auto cd = ctx.first_context_data();
         while (cd->chain_index() > size_t(level)) cd = cd->next_context_data();
