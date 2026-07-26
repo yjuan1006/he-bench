@@ -178,12 +178,26 @@ func main() {
 				results[j.op] = [2]float64{m, s}
 			}
 
-			// relin = mul_cc_rlk - mul_cc (음수면 0 clamp, std=0).
-			relin := results["mul_cc_rlk"][0] - results["mul_cc"][0]
-			if relin < 0 {
-				relin = 0
+			// relin: 직접 계측. (2026-07-26 변경)
+			// 예전에는 relin = mul_cc_rlk - mul_cc 파생값이었고 std=0으로 기록했다. 그 방식은
+			//   (1) 분산 정보가 사라지고(std=0이 CV 통계를 인공적으로 낮춤),
+			//   (2) MulRelin이 융합 경로라 "두 평균의 차"가 독립 Relinearize 비용과 다른 양이며,
+			//   (3) SEAL 하네스는 직접 계측이라 라이브러리 간 계측 방식이 불일치했다.
+			// SEAL과 동일한 패턴: size-3(degree 2) 입력을 타이머 밖에서 1회 만들고
+			// out-of-place Relinearize를 반복한다. Relinearize는 ctIn을 읽기만 하므로
+			// (core/rlwe/evaluator_evaluationkey.go: ctIn.Value[0..2] 읽기, opOut에만 기록)
+			// 반복해도 입력이 오염되지 않는다(§4).
+			// ※ 이 블록은 기존 7개 측정이 끝난 뒤에 둔다 — 앞에 두면 할당자·메모리 상태가
+			//    달라져 다른 op의 측정 조건이 바뀐다.
+			relinIn := ckks.NewCiphertext(params, 2, L)
+			if err := eval.Mul(ctA, ctB, relinIn); err != nil {
+				panic(err)
 			}
-			results["relin"] = [2]float64{relin, 0}
+			outRelin := ckks.NewCiphertext(params, 1, L)
+			mRelin, sRelin := meanStd(measure(*reps, *warmup, func() error {
+				return eval.Relinearize(relinIn, outRelin)
+			}))
+			results["relin"] = [2]float64{mRelin, sRelin}
 
 			// CSV 출력 순서 = 스펙의 8-op 순서.
 			order := []string{"add_cc", "add_cp", "mul_cp", "mul_cc", "mul_cc_rlk", "relin", "rescale", "rot1"}

@@ -253,9 +253,17 @@ int main(int argc, char** argv) {
             auto [m_res, s_res] = measure(reps, warmup, [&]() { cc->Rescale(cRes); });
             auto [m_rot, s_rot] = measure(reps, warmup, [&]() { cc->EvalRotate(ctA, 1); });
 
-            // relin = mul_cc_rlk - mul_cc (음수면 0 clamp, std=0).
-            double relin = m_rlk - m_mulcc;
-            if (relin < 0) relin = 0;
+            // relin: 직접 계측. (2026-07-26 변경)
+            // 예전에는 relin = m_rlk - m_mulcc 파생값이었고 std=0으로 기록했다. 그 방식은
+            //   (1) 분산 정보가 사라지고(std=0이 CV 통계를 인공적으로 낮춤),
+            //   (2) EvalMult가 융합 경로라 "두 평균의 차"가 독립 Relinearize 비용과 다른 양이며,
+            //   (3) SEAL 하네스는 직접 계측이라 라이브러리 간 계측 방식이 불일치했다.
+            // SEAL과 동일한 패턴으로 맞춘다: size-3 입력을 타이머 밖에서 1회 만들고
+            // out-of-place Relinearize를 반복(입력 무오염, §4).
+            // ※ 이 블록은 기존 7개 measure() 뒤에 둔다 — 앞에 두면 할당자·메모리 상태가
+            //    달라져 다른 op의 측정 조건이 바뀐다.
+            Ciphertext<DCRTPoly> cProd3 = cc->EvalMultNoRelin(ctA, ctB);
+            auto [m_relin, s_relin] = measure(reps, warmup, [&]() { cc->Relinearize(cProd3); });
 
             auto row = [&](const std::string& op, double mean, double sd) {
                 csv << "openfhe," << p.name << "," << p.logN << "," << maxLevel << ","
@@ -267,12 +275,12 @@ int main(int argc, char** argv) {
             row("mul_cp", m_mulcp, s_mulcp);
             row("mul_cc", m_mulcc, s_mulcc);
             row("mul_cc_rlk", m_rlk, s_rlk);
-            row("relin", relin, 0.0);
+            row("relin", m_relin, s_relin);
             row("rescale", m_res, s_res);
             row("rot1", m_rot, s_rot);
 
             std::cerr << "  L=" << L << " add_cc=" << m_addcc << " mul_cc=" << m_mulcc
-                      << " relin=" << relin << " rot1=" << m_rot << " rescale=" << m_res << "\n";
+                      << " relin=" << m_relin << " rot1=" << m_rot << " rescale=" << m_res << "\n";
         }
     }
 

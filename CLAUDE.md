@@ -33,7 +33,13 @@ op 목록(정확히 이 8개):
 - mul_cp     ct×pt (relin 불필요)
 - mul_cc     ct×ct, relin 없음(결과 degree-2)
 - mul_cc_rlk ct×ct, relin 포함(결과 degree-1)
-- relin      재선형화 비용 = mul_cc_rlk - mul_cc (음수면 0 clamp, std=0)
+- relin      재선형화 단독 비용. **직접 계측한다** — size-3(degree-2) 암호문을
+             타이머 밖에서 1회 만들고 out-of-place relinearize를 반복 측정.
+             ⚠️ 2026-07-26 이전 스펙은 `relin = mul_cc_rlk - mul_cc (음수면 0 clamp, std=0)`
+             파생값이었다. 바꾼 이유: (1) std=0이라 분산 정보가 없고 CV 통계를
+             인공적으로 낮췄다 (2) 융합 곱셈(EvalMult/MulRelin)이 있는 라이브러리에서는
+             '두 평균의 차'가 독립 relinearize 비용과 다른 양이다 (3) SEAL 하네스는
+             직접 계측이라 라이브러리 간 계측 방식이 불일치했다.
 - rescale    모듈러스 1개 드롭 (level>0에서만)
 - rot1       +1 슬롯 회전
 레벨 스윕: 각 프리셋에서 level = maxLevel..1 전부. 프리셋 3종(small/medium/large,
