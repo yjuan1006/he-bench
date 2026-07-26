@@ -19,7 +19,9 @@
 #include <cmath>
 #include <cstring>
 #include <iomanip>
+#include <cstdio>
 #include <iostream>
+#include "precision_common.h"
 #include <random>
 #include <string>
 #include <vector>
@@ -39,17 +41,14 @@ static const int P_BITS = 60;  // 단일 특수 소수; SEAL_TASK.md §2 참조
 // -log2(mean|err|). 오차가 0이면(있을 수 없지만) inf 대신 큰 수를 피하려고 클램프.
 static double precision_bits(const vector<double> &got, const vector<double> &want)
 {
-    double s = 0;
-    for (size_t i = 0; i < want.size(); i++) s += fabs(got[i] - want[i]);
-    double mean_err = s / want.size();
-    if (mean_err <= 0) return 999.0;
-    return -log2(mean_err);
+    return precision_common::precision_bits(got, want);
 }
 
 int main(int argc, char **argv)
 {
     string preset_name = "small", levels_mode = "gate";
-    int firstmod_override = 0, pbits_override = 0;
+    int firstmod_override = 0, pbits_override = 0, reps = 1;
+    bool csv = false;
     for (int i = 1; i < argc - 1; i++) {
         if (!strcmp(argv[i], "-preset")) preset_name = argv[++i];
         // -levels all: 전 레벨 스윕. §5.2 이등분 격리용 —
@@ -59,7 +58,9 @@ int main(int argc, char **argv)
         // rot1 정밀도가 바닥 프라임/P 비율에 걸려 있는지 가르는 데 쓴다.
         else if (!strcmp(argv[i], "-firstmod")) firstmod_override = atoi(argv[++i]);
         else if (!strcmp(argv[i], "-pbits"))    pbits_override = atoi(argv[++i]);
+        else if (!strcmp(argv[i], "-reps"))     reps = atoi(argv[++i]);
     }
+    for (int i = 1; i < argc; i++) if (!strcmp(argv[i], "-csv")) csv = true;
 
     const Preset *P = nullptr;
     for (auto &p : PRESETS) if (p.name == preset_name) P = &p;
@@ -88,15 +89,7 @@ int main(int argc, char **argv)
     SEALContext ctx(parms, true, sec_level_type::none);
     if (!ctx.parameters_set()) { cerr << ctx.parameter_error_message() << "\n"; return 1; }
 
-    KeyGenerator keygen(ctx);
-    SecretKey sk = keygen.secret_key();
-    PublicKey pk;   keygen.create_public_key(pk);
-    RelinKeys rlk;  keygen.create_relin_keys(rlk);
-    GaloisKeys glk; keygen.create_galois_keys(vector<int>{1}, glk);
-
-    Encryptor encryptor(ctx, pk);
     Evaluator evaluator(ctx);
-    Decryptor decryptor(ctx, sk);
     CKKSEncoder encoder(ctx);
 
     const double scale = pow(2.0, P->scaleBits);
@@ -136,11 +129,9 @@ int main(int argc, char **argv)
     cout << "\n";
 
     // ================= 정밀도 =================
-    // 알려진 값: 고정 시드 → 재현 가능. |x|<=1 이라 곱셈 결과도 표현 범위 안.
-    mt19937_64 rng(20260725);
-    uniform_real_distribution<double> dist(-1.0, 1.0);
-    vector<double> x(slots), y(slots);
-    for (size_t i = 0; i < slots; i++) { x[i] = dist(rng); y[i] = dist(rng); }
+    // 입력 벡터는 precision_common.h 규약 — 세 라이브러리가 동일한 수열을 쓴다.
+    vector<double> x, y;
+    precision_common::make_inputs(slots, x, y);
 
     cout << "=== precision: -log2(mean|err|), expect ~33-34 bits at scale 2^45 ===\n";
     cout << left << setw(8) << "preset" << setw(7) << "level"
@@ -151,6 +142,17 @@ int main(int argc, char **argv)
     if (levels_mode == "all") { for (int l = P->maxLevel; l >= 1; l--) levels.push_back(l); }
     else                      { levels = {P->maxLevel, 1}; }
     bool fail = false;
+    if (csv) cout << "library,preset,logN,maxLevel,level,path,rep,bits\n";
+
+    for (int rep = 0; rep < reps; rep++) {
+    // 반복마다 키 재생성 — 비밀키·암호화 오차 표본이 산포의 원천이다.
+    KeyGenerator keygen(ctx);
+    SecretKey sk = keygen.secret_key();
+    PublicKey pk;   keygen.create_public_key(pk);
+    RelinKeys rlk;  keygen.create_relin_keys(rlk);
+    GaloisKeys glk; keygen.create_galois_keys(vector<int>{1}, glk);
+    Encryptor encryptor(ctx, pk);
+    Decryptor decryptor(ctx, sk);
 
     for (int level : levels) {
         // 해당 레벨의 parms_id 찾기
@@ -181,8 +183,13 @@ int main(int argc, char **argv)
         auto report = [&](const char *path, const vector<double> &got,
                           const vector<double> &want) {
             double b = precision_bits(got, want);
-            cout << left << setw(8) << P->name << setw(7) << level
-                 << setw(26) << path << fixed << setprecision(2) << b << "\n";
+            if (csv) {
+                printf("seal,%s,%d,%d,%d,%s,%d,%.4f\n", P->name.c_str(), (int)P->logN,
+                       P->maxLevel, level, path, rep, b);
+            } else {
+                cout << left << setw(8) << P->name << setw(7) << level
+                     << setw(26) << path << fixed << setprecision(2) << b << "\n";
+            }
             // 게이트: 33~34 기대. 30 미만이면 체인 매핑 파탄으로 본다.
             if (b < 30.0) fail = true;
         };
@@ -192,22 +199,30 @@ int main(int argc, char **argv)
         for (size_t i = 0; i < slots; i++) want_rot[i] = x[(i + 1) % slots];
 
         // 기준선: 연산 없이 암호화→복호화. 여기가 깨지면 연산이 아니라 파라미터 문제다.
-        report("encrypt+decrypt", dec(ct_x), x);
+        report("enc_dec", dec(ct_x), x);
 
         // 경로 1: mul_cp + rescale
         {
             Ciphertext c;
             evaluator.multiply_plain(ct_x, pt_y_lv, c);
             evaluator.rescale_to_next_inplace(c);
-            report("mul_cp+rescale", dec(c), want_mul);
+            report("mul_cp_rs", dec(c), want_mul);
         }
+        // 경로 2b: relin 단독 — rescale 없이 KS 노이즈를 그대로 노출
+        {
+            Ciphertext c3, c;
+            evaluator.multiply(ct_x, ct_y, c3);          // size-3, scale^2
+            evaluator.relinearize(c3, rlk, c);           // size-2, rescale 안 함
+            report("relin", dec(c), want_mul);
+        }
+
         // 경로 2: mul_cc + relin + rescale
         {
             Ciphertext c;
             evaluator.multiply(ct_x, ct_y, c);
             evaluator.relinearize_inplace(c, rlk);
             evaluator.rescale_to_next_inplace(c);
-            report("mul_cc+relin+rescale", dec(c), want_mul);
+            report("mul_cc_relin_rs", dec(c), want_mul);
         }
         // 경로 3: rot1
         {
@@ -217,6 +232,7 @@ int main(int argc, char **argv)
         }
     }
 
-    cout << "\n" << (fail ? "GATE: FAIL (some path < 30 bits)" : "GATE: PASS") << "\n";
+    }  // rep 루프
+    if (!csv) cout << "\n" << (fail ? "GATE: FAIL (some path < 30 bits)" : "GATE: PASS") << "\n";
     return fail ? 1 : 0;
 }

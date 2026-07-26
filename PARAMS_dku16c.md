@@ -41,6 +41,24 @@
 **logQ는 세 라이브러리가 275 / 505 / 735로 완전히 일치한다** (§3 정합 기준의 핵심).
 **logQP는 전부 다르다** — P가 각 라이브러리 자동 결정(SEAL만 우리가 고정)이기 때문이다.
 
+### 2.0 교란 변수 — 비밀키·오차 분포 (정밀도 비교의 전제)
+
+정밀도 차이를 P/digit 구조에 귀속시키려면 **비밀키 분포와 오차 표준편차가 같아야** 한다.
+셋 다 확인한 결과 **실질적으로 동일**하다.
+
+| lib | 비밀키 분포 | 해밍 웨이트 제약 | 오차 σ | 오차 bound | 확인 위치 |
+|-----|-------------|------------------|-------:|-----------|-----------|
+| OpenFHE | **uniform ternary** {−1,0,1} 각 1/3 | 없음 | **3.19** | — | 런타임 `GetSecretKeyDist()` → `UNIFORM_TERNARY`, `GetDistributionParameter()` → 3.19 (`pke/schemebase/rlwe-cryptoparameters.h:145,217`) |
+| Lattigo | **uniform ternary** — `Ternary{P: 2/3}` → 확률 [1/3, 1/3, 1/3] | 없음(`H=0`) | **3.2** | 19.2 (6σ) | 런타임 `params.Xs()` → `{0.6667 0}`, `params.Xe()` → `{3.2 19.2}`. 정의 `core/rlwe/security.go:10,13,17,19`, P 의미 `ring/sampler.go:48-58` |
+| SEAL | **uniform ternary** — `uniform_int_distribution(0,2)` | 없음 | **3.2** | width multiplier 6 | `native/src/seal/util/rlwe.cpp:21-38` (`sample_poly_ternary`, keygen에서 호출 `keygenerator.cpp:74`), σ 상수 `util/hestdparms.h:145` → `globals.h:36` |
+
+- 세 라이브러리 모두 **해밍 웨이트 제약 없는 균등 삼진 비밀키**다. 희소 삼진(sparse ternary)을
+  쓰는 곳은 없다 — OpenFHE도 기본값이 `UNIFORM_TERNARY`이지 `SPARSE_TERNARY`가 아니다.
+- σ는 **3.19 vs 3.2 vs 3.2**로 OpenFHE만 0.3% 작다. 정밀도 비트로 환산하면
+  `log2(3.2/3.19) ≈ 0.005비트` — **무시 가능**하다.
+- ⇒ **비밀키·오차 분포는 교란 변수가 아니다.** 관측되는 정밀도 차이를 P·digit 구조로
+  귀속시켜도 된다. ⚠️ 단 §5의 `enc_dec` 기준선 차이는 별개 문제다(아래 참조).
+
 ### 2.1 digit 수는 세 라이브러리 모두 레벨의 함수다
 
 과거 문서의 "OpenFHE dnum 3 고정 / Lattigo 6~8"은 **틀린 서술**이었다.
@@ -134,3 +152,85 @@ key-switch 계열(`relin`/`rot1`/`mul_cc_rlk`)에서 P가 작은 쪽이 유리�
 ⚠️ 저레벨 우위의 **배수**는 프라임 개수 셈만으로 설명되지 않는다(large L1: OpenFHE
 1 digit × 7 프라임 vs SEAL 2 digit × 3 프라임). 구현 상수가 남아 있으므로
 "P 고정 오버헤드가 주된 방향"까지가 결론이다.
+
+---
+
+## 5. key-switch 정밀도 실측 (2026-07-26)
+
+프로그램: `openfhe_precision.cpp` / `lattigo_precision.go` / `seal_precision.cpp`.
+★ `openfhe_bench.cpp`·`lattigo_bench.go`는 수정하지 않고 독립 프로그램으로 만들었다.
+절차 통일: 입력 벡터·오차 정의는 `precision_common.h` 규약(xorshift64*, 시드
+`0x2026072500000001`). **C++/Go 수열이 비트 단위로 일치함을 확인**했다.
+레벨 진입은 스케일 불변 drop으로 통일(SEAL `mod_switch_to` / OpenFHE `LevelReduce` /
+Lattigo `DropLevel`). 측정 조건은 본측정과 동일(`run_warm.sh`, 코어 12 고정), 5회 반복.
+
+### 5.1 공개키 암호화 (주 측정, 세 라이브러리 동일 조건)
+
+`-log2(전 슬롯 평균|err|)`, 5회 평균. maxLevel 기준.
+
+| preset | path | OpenFHE | Lattigo | SEAL |
+|--------|------|--------:|--------:|-----:|
+| small | enc_dec | 30.46 | 35.09 | 35.08 |
+| | rot1 | 30.41 | 34.49 | 34.50 |
+| medium | enc_dec | 29.46 | 34.08 | 34.09 |
+| | rot1 | 29.41 | 33.49 | 33.49 |
+| large | enc_dec | 28.46 | 33.08 | 33.09 |
+| | rot1 | 28.34 | 32.50 | **30.91** |
+
+**⚠️ OpenFHE의 기준선(`enc_dec`)이 일관되게 4.6비트 낮다.** 절대 비교가 성립하지 않으므로
+**각 라이브러리 자신의 기준선 대비 손실**로 봐야 한다.
+
+### 5.2 비밀키 암호화 (기준선 오염 제거, large, 5회)
+
+| lib | enc_dec | rot1 | KS 손실 | 절대 KS 노이즈 `-log2` |
+|-----|--------:|-----:|--------:|----------------------:|
+| OpenFHE | 33.33 (±0.03) | 29.67 (±1.38) | **3.66** | **29.79** (최악) |
+| Lattigo | 36.63 (±0.02) | 33.08 (±0.02) | 3.55 | **33.21** (최良) |
+| SEAL | 36.62 (±0.02) | 30.97 (±0.06) | **5.65** | 31.00 |
+
+- 공개키→비밀키로 바꾸면 OpenFHE 기준선이 28.46 → 33.33으로 회복된다.
+  즉 §5.1에서 OpenFHE의 KS 손실이 0.05비트로 보였던 것은 **공개키 암호화 노이즈가
+  KS 노이즈를 덮고 있었기 때문**이지 key-switch가 정밀한 것이 아니다.
+- ⚠️ 비밀키로 바꿔도 OpenFHE 기준선은 여전히 Lattigo/SEAL보다 3.3비트 낮다(33.33 vs 36.6).
+  이 잔여 차이는 원인 미규명이다.
+- ⚠️ OpenFHE `rot1`의 반복 간 산포가 1.38비트로 크다(Lattigo 0.02, SEAL 0.06).
+
+### 5.3 logP·digit 크기와의 대조
+
+| preset | lib | logP | 최대 digit | digit−P | rot1 손실(pk) |
+|--------|-----|-----:|----------:|--------:|-------------:|
+| small | openfhe / lattigo / seal | 120 / 55 / 60 | 95 / 50 / 50 | −25 / −5 / −10 | 0.05 / 0.60 / 0.58 |
+| medium | openfhe / lattigo / seal | 240 / 110 / 60 | 190 / 100 / 55 | −50 / −10 / −5 | 0.06 / 0.59 / 0.60 |
+| large | openfhe / lattigo / seal | 300 / 120 / 60 | 285 / 105 / 60 | −15 / −15 / **0** | 0.12 / 0.58 / **2.18** |
+
+- **확정: SEAL large만 `digit − P = 0`이고, 거기서만 손실이 2.18비트로 튄다.**
+  바닥 프라임 60비트 = P 60비트라 감쇠가 없다. 다른 8개 조합은 모두 −5 이하이고 손실 0.58 이하.
+- **기각: "P가 크면 KS 정밀도가 좋다"는 단조 관계는 성립하지 않는다.** OpenFHE는 P가 가장
+  큰데(300) 절대 KS 노이즈가 가장 크다(2^−29.79). OpenFHE와 Lattigo는 `digit−P`가 −15로
+  같은데도 절대 KS 노이즈가 3.4비트 차이난다. **P 하나로는 설명되지 않는다.**
+
+### 5.4 relin·rescale 경로 — KS 노이즈가 보이지 않는다
+
+`enc_dec` 대비 손실(pk, maxLevel). 음수는 기준선보다 좋다는 뜻.
+
+| lib | rot1 | relin(rescale 없음) | mul_cc+relin+rescale |
+|-----|-----:|-------------------:|---------------------:|
+| OpenFHE | 0.12 | −0.31 | 0.93 |
+| Lattigo | 0.58 | −0.40 | 0.35 |
+| SEAL | 2.18 | −0.38 | 0.35 |
+
+**`relin` 단독은 rot1처럼 떨어지지 않는다 — 전혀 떨어지지 않는다(오히려 −0.4).**
+이유는 스케일이다: `ct×ct` 직후 스케일이 Δ²이므로 그 시점에 주입되는 KS 노이즈는
+복호 시 Δ²으로 나뉜다. 즉 rot1(스케일 Δ 유지) 대비 **2^45배 억제**된다.
+`mul_cc+relin+rescale`의 0.35비트는 KS 노이즈가 아니라 **rescale 반올림**이다.
+
+⇒ "rescale이 KS 노이즈를 가린다"는 **부정확하다.** rescale이 가리는 것이 아니라,
+곱셈 경로에서는 **KS가 이미 Δ² 스케일에서 일어나 애초에 드러나지 않는다.**
+KS 노이즈를 보려면 스케일이 바뀌지 않는 `rot1`을 써야 한다.
+
+### 5.5 OpenFHE 저레벨 rescale 이상 (별건)
+
+OpenFHE만 L1에서 rescale 포함 경로가 크게 떨어진다 — `mul_cp_rs`: small 31.04→27.67,
+medium 30.22→25.96, large 27.60→24.28. **반복 간 산포가 0.00**으로 완전히 결정적이라
+노이즈가 아니라 계통 오차다(FIXEDMANUAL의 명목 스케일 2^45와 실제 프라임의 불일치로 추정).
+Lattigo·SEAL은 두 레벨에서 동일하다. 원인 미확정.
