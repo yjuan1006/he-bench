@@ -20,7 +20,11 @@ TALLY="$SB/tally.txt"
 
 run_one() {   # lib preset threads
   local lib=$1 p=$2 th=$3
-  local out="results_${lib}_${p}_${th}_dku16c.csv"
+  local final="results_${lib}_${p}_${th}_dku16c.csv"
+  # 하네스는 -out 경로에 매 시도마다 쓴다. 기각된 시도가 확정본을 덮어쓰면 안 되므로
+  # 임시 경로에 쓰고 채택됐을 때만 제자리로 옮긴다. (기존 12개 CSV는 git 추적 대상도
+  # 아니라 덮어쓰면 복구 불가 — §5.5의 PNG 소실 사고와 같은 구조다.)
+  local out="$TR/staging_${lib}_${p}_${th}.csv"
   local prefix="$TR/${lib}_${p}_${th}"
   # mt는 in-run 모니터가 OMP를 교란하므로 전후 확인만 (run_monitored.sh 주석 참조)
   if [ "$th" = "mt" ]; then export MONMODE=prepost; else export MONMODE=inrun; fi
@@ -48,6 +52,12 @@ run_one() {   # lib preset threads
   local rc=$?
   echo "$res" | grep -E "^  try|^TRIES" || true
   echo "${lib}_${p}_${th} $(echo "$res" | grep '^TRIES' || echo 'TRIES=? REJECTS=?') rc=$rc" >> "$TALLY"
+  if [ "$rc" -eq 0 ] && [ -s "$out" ]; then
+    mv -f "$out" "$final"
+    echo "  -> 채택본을 $final 로 확정"
+  else
+    echo "  -> 채택 실패: $final 은 그대로 둔다(기존값 보존)"
+  fi
   return $rc
 }
 
