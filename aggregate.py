@@ -242,9 +242,14 @@ def plot_level_scaling(df):
                 *[Line2D([0], [0], color="0.3", lw=2.5, linestyle=LIB_LS[l],
                          marker=LIB_MARKER[l], label=l) for l in LIB_ORDER],
             ]
-            leg1 = ax.legend(handles=op_handles, title="operation", loc="upper left")
+            # 두 범례 모두 왼쪽에 세로로 배치한다. 곡선이 모두 단조 증가라 왼쪽 위/가운데가
+            # 항상 비어 있는 반면, lower right는 낮게 깔리는 op(예: mul_cp)의 끝점을 가린다
+            # (3자가 되며 범례가 커져 실제로 large·mid에서 가려졌다).
+            leg1 = ax.legend(handles=op_handles, title="operation", loc="upper left",
+                             framealpha=0.9)
             ax.add_artist(leg1)
-            ax.legend(handles=lib_handles, title="library", loc="lower right")
+            ax.legend(handles=lib_handles, title="library", loc="center left",
+                      framealpha=0.9)
             fig.tight_layout()
             out = out_path(f"plot_{preset}_{tier}{SUFFIX}.png")
             fig.savefig(out, dpi=140)
@@ -267,7 +272,12 @@ def plot_summary_bars(df):
             top = sub[sub["level"] == maxL]
             present = [o for o in ops if not top[top["op"] == o].empty]
             x = range(len(present))
-            width = 0.38
+            # 3자 레이아웃: 막대 중심 간격과 막대 폭을 따로 잡는다.
+            # 예전 공식 offset=(i-0.5)*width 는 2자 전용이라 3자에서 그룹이 눈금 중심에서
+            # 벗어나고(오프셋 -0.19/+0.19/+0.57) 간격==폭이라 막대가 맞닿아 한 덩어리로 보였다.
+            SPACING = 0.26      # 막대 중심 간 간격
+            width = 0.21        # 막대 폭 (SPACING과 달라야 사이가 벌어진다)
+            n_lib = len(LIB_ORDER)
             ymax = 0.0
             for i, lib in enumerate(LIB_ORDER):
                 # mean_us/std_us를 ms(÷1000)로 표시. 원본 데이터는 μs 유지.
@@ -275,21 +285,22 @@ def plot_summary_bars(df):
                         for op in present]
                 errs = [top[(top["op"] == op) & (top["library"] == lib)]["std_us"].mean() / 1000.0
                         for op in present]
-                offset = (i - 0.5) * width
+                offset = (i - (n_lib - 1) / 2.0) * SPACING   # 그룹을 눈금 중심에 정렬
                 # 선형축 → 대칭 에러바(yerr=std). relin은 std=0이라 에러바 없음(정상).
+                # 흰색 edge: 막대끼리 붙어 보이는 것을 끊어준다.
                 ax.bar([xi + offset for xi in x], vals, width,
-                       yerr=errs, capsize=3,
-                       error_kw={"elinewidth": 0.8, "alpha": 0.6},
-                       color=LIB_COLOR[lib], label=lib, edgecolor="black", linewidth=0.8)
-                # 막대 위 값 표기.
+                       yerr=errs, capsize=2.5,
+                       error_kw={"elinewidth": 1.0, "alpha": 0.6},
+                       color=LIB_COLOR[lib], label=lib, edgecolor="white", linewidth=0.6)
+                # 값 라벨은 막대 상단이 아니라 **에러바 캡 위**에 둔다(캡과 겹치지 않게).
                 for xi, v, e in zip(x, vals, errs):
                     if np.isnan(v):
                         continue
                     ax.annotate(f"{v:.{dec}f}", (xi + offset, v + e),
-                                textcoords="offset points", xytext=(0, 3),
-                                ha="center", va="bottom", fontsize=12)
+                                textcoords="offset points", xytext=(0, 3.5),
+                                ha="center", va="bottom", fontsize=8.5)
                     ymax = max(ymax, v + e)
-            ax.set_ylim(0, ymax * 1.20)  # 값 라벨 공간 확보
+            ax.set_ylim(0, ymax * 1.18)  # 값 라벨 공간 확보
             ax.set_title(f"{preset} (logN={sub['logN'].iloc[0]}, level={maxL})")
             ax.set_xticks(list(x))
             ax.set_xticklabels(present, fontsize=13)
