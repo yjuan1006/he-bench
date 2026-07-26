@@ -94,7 +94,7 @@ cd /data/he-bench
   - Lattigo: `1t` = `GOMAXPROCS=1`, `mt` = 기본
 - `machine` = `dku16c` (baseline은 `epyc4t`)
 
-즉 라이브러리당 3프리셋 × {1t,mt} = **6개 파일**, 두 라이브러리 12개.
+즉 라이브러리당 3프리셋 × {1t,mt} = **6개 파일**, 세 라이브러리(openfhe/lattigo/seal) **18개**.
 검증 후 `./venv/bin/python aggregate.py`로 병합.
 
 ### 5. SMT 없음 → **코어 스윕(1/2/4/8/16)이 깨끗하다**

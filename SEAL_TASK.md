@@ -143,12 +143,26 @@ done
 
 ## 4. 결과 해석 시 주의할 점
 
-- **`sec_level` 비대칭**: large만 tc128을 통과한다. 세 프리셋 모두 `none`으로 통일해
-  측정하되, "보안 미검증"이라는 단서가 small/medium에만 실질적으로 해당한다는 점을
-  README에 정확히 적을 것. 전부 미검증이라고 뭉뚱그리면 부정확하다.
-- **dnum이 레벨에 따라 변한다**: OpenFHE는 dnum 3 고정, Lattigo는 6~8, SEAL은
-  레벨당 데이터 프라임 수만큼(레벨 5면 6). 즉 SEAL만 **dnum이 레벨의 함수**다.
-  이것이 relin/rot1의 레벨 대비 기울기에 어떻게 나타나는지가 3자 비교의 핵심 관찰점이다.
-  ⚠️ 사전 프로브(1 vCPU, 노이즈 큼)에서는 small 기준 L=1→5에서 relin이 약 4배 증가해
-  **명확한 초선형은 관측되지 않았다.** 예상을 확정된 결론처럼 적지 말고 실측 결과를 따를 것.
+> ⚠️ 아래는 **실측 완료 후 갱신된 서술**이다. 수치 정본은 `PARAMS_dku16c.md`.
+
+- **`sec_level` 비대칭**: SEAL 기준 large만 tc128을 통과한다(logQP 795 ≤ 881).
+  세 프리셋 모두 `none`으로 통일해 측정하되, "보안 미검증" 단서가 SEAL에서는
+  small/medium에만 실질적으로 해당한다는 점을 README에 정확히 적을 것.
+  ⚠️ **이 비대칭은 라이브러리마다 다르다** — 같은 large에서 Lattigo(855)도 상한 이내지만
+  **OpenFHE는 1035로 초과**한다. 실효 보안은 `logQ`가 아니라 **`logQP`**로 판정해야 한다
+  (하이브리드 key-switch의 평가키는 QP 위에 정의된다). `PROJECT_CONTEXT.md §3` 참조.
+- **digit 수는 세 라이브러리 모두 레벨의 함수다** — 차이는 증가 기울기다
+  (**SEAL 1.00 / Lattigo 0.50(small은 1.00) / OpenFHE 0.17~0.50**).
+  - ⚠️ 이 문서의 이전 판에 있던 "OpenFHE는 dnum 3 고정, Lattigo는 6~8, SEAL만 dnum이
+    레벨의 함수"는 **틀린 서술이었다.** `numPartQ=3`은 최상위 레벨의 상한이지 고정값이
+    아니다(large 실제 수열 `3,3,3,3,2,2,2,2,2,2,1,1,1,1,1`). Lattigo의 6~8도 maxLevel 값이다.
+  - **SEAL의 digit이 OpenFHE보다 적은 레벨은 없다.** 저레벨에서 SEAL이 빠른 이유는
+    digit이 적어서가 아니라 **OpenFHE가 레벨과 무관하게 고정 크기 P(특수소수 2/4/5개,
+    logP 120/240/300)를 항상 운반**하기 때문이다. SEAL은 어느 레벨에서나 60비트 1개.
+  - **실측 결과**: relin의 레벨 대비 곡률은 AICc 기준 **SEAL 세 프리셋 모두 2차**,
+    **Lattigo 2차(계수는 SEAL의 약 0.6~0.7배)**, **OpenFHE는 small에서 1차·medium 보류·
+    large 약한 2차**. 사전 프로브의 "명확한 초선형 미관측"은 노이즈 때문이었고,
+    코어 고정 + 사전 가열 조건에서 재측정하니 SEAL의 2차가 명확히 나온다(R² 0.9995~1.0000).
+  - SEAL↔OpenFHE 교차: relin 기준 medium L≈9.8, large L≈8.5, **small은 교차 없음**
+    (digit이 6까지만 커져 전 구간 SEAL 우위).
 - **부트스트래핑**: SEAL CKKS에는 없다. `bootstrap-bench`는 2자 비교로 유지.

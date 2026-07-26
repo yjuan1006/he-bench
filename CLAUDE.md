@@ -1,7 +1,10 @@
-# CLAUDE.md — HE Library Benchmark (OpenFHE vs Lattigo)
+# CLAUDE.md — HE Library Benchmark (OpenFHE vs Lattigo vs SEAL)
+
+> 이 문서는 **측정 API 사실** 전용이다. 파라미터 정본은 `PARAMS_dku16c.md`,
+> 정합 기준·측정 규칙은 `PROJECT_CONTEXT.md`, 실행/프로토콜은 `README.md`.
 
 ## 목적 (Goal)
-CKKS 연산의 **암호문 1개 기준** latency를 OpenFHE(C++)와 Lattigo(Go)에서 측정·비교한다.
+CKKS 연산의 **암호문 1개 기준** latency를 OpenFHE(C++) · Lattigo(Go) · SEAL(C++)에서 측정·비교한다.
 - 연산: 덧셈 / 곱셈 / 회전 (곱셈은 세부 케이스로 분해)
 - 조건: (a) 파라미터 프리셋별 + (b) 프리셋 내 레벨별 전수 스윕
 - 측정: 각 연산 warm-up 후 **30회**, **평균 + 표본표준편차(n-1)**, μs 단위
@@ -22,7 +25,7 @@ he-bench/ 안에: CLAUDE.md, go.mod, lattigo_bench.go, openfhe_bench.cpp,
 CMakeLists.txt, aggregate.py, (+실행 산출) results_*.csv, plot_*.png
 
 ## 공통 측정 스펙 (두 구현이 반드시 동일하게)
-CSV 스키마(헤더 고정, 두 라이브러리 동일):
+CSV 스키마(헤더 고정, **세 라이브러리 동일**):
   library,preset,logN,maxLevel,level,op,mean_us,std_us,reps
 op 목록(정확히 이 8개):
 - add_cc     ct+ct
@@ -116,4 +119,4 @@ OpenFHE EvalAdd/EvalMult는 새 Ciphertext 반환(functional) → 매 호출 할
 1. go run lattigo_bench.go → results_lattigo.csv (레벨×op 전부, 30회 평균·표준편차)
 2. cmake . && make && ./openfhe_bench → results_openfhe.csv (동일 스키마)
 3. python3 aggregate.py → results_combined.csv + plot_*.png + 콘솔 요약표
-4. 두 라이브러리 값이 정성적으로 일관(relin/rotation ≫ mul ≫ add, 레벨 단조 감소)
+4. 세 라이브러리 값이 정성적으로 일관(relin/rotation ≫ mul ≫ add, 레벨 단조 감소)
