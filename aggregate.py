@@ -287,17 +287,23 @@ def plot_level_scaling(df):
                     # mean_us/std_us를 ms(÷1000)로 그린다. 원본 데이터는 μs 유지.
                     mean_ms = d["mean_us"].values / 1000.0
                     std_ms = d["std_us"].values / 1000.0
-                    # 에러바 = 표준편차 1배, 캡 스타일. 색은 해당 라이브러리 색.
-                    ax.errorbar(
+                    # 선·마커와 에러바를 나눠 그린다.
+                    # errorbar()에 alpha를 주면 선·마커까지 반투명해지므로,
+                    # 선·마커는 plot()으로 불투명하게 그리고 에러바만 fmt="none"으로 얹는다.
+                    ax.plot(
                         d["level"], mean_ms,
-                        yerr=std_ms,
                         color=LIB_COLOR[lib],
                         linestyle="-",
                         marker=op_marker[op],
                         markersize=6, linewidth=2.0,
                         markeredgewidth=0, markeredgecolor=LIB_COLOR[lib],
-                        elinewidth=1.2, capsize=3, capthick=1.2,
+                    )
+                    # 에러바 = 표준편차 1배. 색은 해당 라이브러리 색, 반투명으로 얹는다.
+                    ax.errorbar(
+                        d["level"], mean_ms, yerr=std_ms, fmt="none",
                         ecolor=LIB_COLOR[lib],
+                        elinewidth=0.8, capsize=2, capthick=0.8,
+                        alpha=0.4,
                     )
                     ymax = max(ymax, float((mean_ms + std_ms).max()))
             # 선형축, 층 데이터에 타이트하게 0부터 시작 → 배수 차이를 정직하게 표시.
