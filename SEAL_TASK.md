@@ -163,6 +163,9 @@ done
     **Lattigo 2차(계수는 SEAL의 약 0.6~0.7배)**, **OpenFHE는 small에서 1차·medium 보류·
     large 약한 2차**. 사전 프로브의 "명확한 초선형 미관측"은 노이즈 때문이었고,
     코어 고정 + 사전 가열 조건에서 재측정하니 SEAL의 2차가 명확히 나온다(R² 0.9995~1.0000).
-  - SEAL↔OpenFHE 교차: relin 기준 medium L≈9.8, large L≈8.5, **small은 교차 없음**
-    (digit이 6까지만 커져 전 구간 SEAL 우위).
+  - SEAL↔OpenFHE 교차(정정본, 정본은 `PARAMS_dku16c.md §4.1`):
+    **small·medium은 교차 없음**(최근접 0.611·0.908), **large만 교차**하며
+    relin **L≈9.1**(±2%: 8.92~9.35) / rot1 **L≈8.6**(±2%: 8.47~8.78).
+    ⚠️ 이 문서 이전 판의 `medium L≈9.8, large L≈8.5`는 두 가지가 겹친 오류다 —
+    ⑴ relin이 파생값이었고 ⑵ 교차 산출이 '마지막 교차'를 집었다. 둘 다 수정됐다.
 - **부트스트래핑**: SEAL CKKS에는 없다. `bootstrap-bench`는 2자 비교로 유지.
