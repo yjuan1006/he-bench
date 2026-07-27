@@ -62,6 +62,7 @@ def log_safe_yerr(mean, std):
 
 
 SUFFIX = ""  # 출력 파일명 접미사 (main에서 --suffix로 설정)
+THREAD_MODE = "1t"  # --suffix에서 유도. 물리 게이트가 1t/mt를 다르게 검사한다.
 
 # 8-op 산출물 디렉터리 (PNG·CSV 공용). 부트스트래핑(plots/boot)·key-switch(plots/ks)와 분리.
 # 같은 실행의 산출물은 한곳에 모은다 — PNG는 여기, CSV는 루트로 흩어지면 짝을 잃는다.
@@ -154,7 +155,73 @@ def load(lattigo_csvs, openfhe_csvs, seal_csvs):
             sys.exit(f"[schema] {col} 컬럼에 알 수 없는 값 {vals} — {n_nan}행. "
                      f"이 행들은 콘솔·플롯에서는 필터로 빠지지만 results_combined.csv에는 "
                      f"기록되어 조용한 오염이 된다. 입력 파일을 확인할 것.")
+    physics_gate(df)
     return df
+
+
+# --- 물리 정합 게이트 (2026-07-27 추가) ---
+# 왜 필요한가: lattigo large 1t L15에서 relin > mul_cc_rlk 위반이 나왔는데 사람이 플롯을
+# 눈으로 보고서야 잡았다. 자동화하지 않으면 다음 재측정·라이브러리 추가에서 조용히 지나간다.
+# 임계값은 전부 실측 분포에서 정했다(근거를 주석에 남긴다).
+#
+# 세 라이브러리 18 CSV 기준 관측값:
+#   relin/mul_cc_rlk : 1t 최대 0.982 (90행) / mt 최대 2.28 (CV가 1.8까지 가서 평균이 무의미)
+#   1t 인접레벨 비    : 최대 0.975
+#   1t CV            : 중앙 0.014, 최대 0.315 (작은 op) → CV는 판별자로 쓸 수 없다
+FUSE_RATIO_TOL_1T = 1.02   # relin/mul_cc_rlk 상한. 정상 최대 0.982, 실제 위반 1.095 → 사이에 둔다
+MONO_RATIO_TOL_1T = 1.02   # v[L]/v[L+1] 상한. 정상 최대 0.975
+SIGMA_K = 3.0              # mt는 비율이 무의미하므로 자체 분산으로 설명 안 되는 것만 위반
+
+
+def physics_gate(df):
+    """물리적으로 불가능한 값과 계측 실패 흔적을 잡는다. 위반 시 중단한다."""
+    viol = []
+
+    # G1. std_us == 0 — reps>1에서 0은 측정값이 아니다(파생값·일괄계측의 흔적).
+    #     relin이 실제로 이 상태였다(lattigo·openfhe, 각 60행).
+    z = df[(df["std_us"] == 0) & (df["reps"] > 1)]
+    for _, r in z.iterrows():
+        viol.append(f"[std=0] {r.library} {r.preset} L{int(r.level)} {r.op} "
+                    f"(reps={int(r.reps)}) — 파생값이거나 반복별 계측이 아님")
+
+    piv_m = df.pivot_table(index=["library", "preset", "level"], columns="op", values="mean_us")
+    piv_s = df.pivot_table(index=["library", "preset", "level"], columns="op", values="std_us")
+    has = {"relin", "mul_cc_rlk"} <= set(piv_m.columns)
+
+    # G2. relin <= mul_cc_rlk — relin 단독이 '곱셈+relin'보다 비쌀 수 없다.
+    #     융합(fusion)이 있어도 이 부등식은 유지된다.
+    if has:
+        for idx in piv_m.index:
+            rel, rlk = piv_m.loc[idx, "relin"], piv_m.loc[idx, "mul_cc_rlk"]
+            if pd.isna(rel) or pd.isna(rlk) or rlk <= 0:
+                continue
+            if THREAD_MODE == "1t":
+                if rel / rlk > FUSE_RATIO_TOL_1T:
+                    viol.append(f"[relin>mul_cc_rlk] {idx} — {rel:.1f} / {rlk:.1f} = "
+                                f"{rel/rlk:.4f} > {FUSE_RATIO_TOL_1T}")
+            else:
+                sig = SIGMA_K * (piv_s.loc[idx, "relin"] + piv_s.loc[idx, "mul_cc_rlk"])
+                if rel - rlk > sig:
+                    viol.append(f"[relin>mul_cc_rlk] {idx} — 차 {rel-rlk:.1f} > "
+                                f"{SIGMA_K}σ {sig:.1f} (분산으로 설명 안 됨)")
+
+    # G3. 1t 레벨 단조성 — 레벨이 낮을수록 빨라야 한다.
+    #     작은 op는 CV가 0.3까지 가므로 σ 조건을 함께 걸어 오탐을 막는다.
+    if THREAD_MODE == "1t":
+        for (lib, preset, op), g in df.groupby(["library", "preset", "op"], observed=True):
+            g = g.sort_values("level")
+            v, sd, lv = g.mean_us.tolist(), g.std_us.tolist(), g.level.tolist()
+            for i in range(len(v) - 1):
+                if v[i] > v[i + 1] * MONO_RATIO_TOL_1T and (v[i] - v[i + 1]) > 2 * (sd[i] + sd[i + 1]):
+                    viol.append(f"[단조성] {lib} {preset} {op} L{int(lv[i])}({v[i]:.1f}) > "
+                                f"L{int(lv[i+1])}({v[i+1]:.1f})")
+
+    if viol:
+        sys.exit("[physics] 물리 정합 게이트 위반 — 통과시키지 않는다.\n  "
+                 + "\n  ".join(viol)
+                 + "\n\n  위반 행을 조사할 것. 재측정이 필요할 수 있다."
+                 + "\n  (임계 근거는 aggregate.py 상단 FUSE_RATIO_TOL_1T 주석 참조)")
+    print(f"[physics] 게이트 통과 ({len(df)}행, mode={THREAD_MODE})")
 
 
 def write_combined(df):
@@ -398,6 +465,8 @@ def main():
             "  예: --suffix _mt        (기본 멀티코어)\n"
             "      --suffix _1thread   (OMP_NUM_THREADS=1)")
     SUFFIX = args.suffix
+    global THREAD_MODE
+    THREAD_MODE = "mt" if "_mt" in args.suffix else "1t"
 
     df = load(args.lattigo, args.openfhe, args.seal)
     write_combined(df)
