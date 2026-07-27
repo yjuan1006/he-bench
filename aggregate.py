@@ -27,8 +27,13 @@ plt.rcParams.update({
 LIB_COLOR = {"lattigo": "#0072B2", "openfhe": "#D55E00", "seal": "#CC79A7"}  # 파랑 / 주황 / 보라
 LIB_ORDER = ["lattigo", "openfhe", "seal"]
 LIB_LABEL = {"lattigo": "Lattigo", "openfhe": "OpenFHE", "seal": "SEAL"}
-LIB_LS = {"lattigo": "-", "openfhe": "--", "seal": ":"}
-LIB_MARKER = {"lattigo": "o", "openfhe": "s", "seal": "^"}
+LIB_LS = {"lattigo": "-", "openfhe": "--", "seal": ":"}      # (구) 레벨 차트 선스타일 인코딩 — 폐지됨
+LIB_MARKER = {"lattigo": "o", "openfhe": "s", "seal": "^"}   # (구) 동상
+# 레벨 차트 신 스타일(2026-07-27): 색=라이브러리(요약 막대와 동일), 마커=연산, 선은 전부 실선.
+# 예전엔 색=연산 / 선스타일=라이브러리라 선 하나를 짚으려면 범례 둘을 교차 참조해야 했고,
+# 요약 막대 차트(색=라이브러리)와 같은 발표 안에서 색의 의미가 뒤바뀌었다.
+# 마커는 티어마다 재사용한다 — 한 차트 안에서만 구분되면 되고, 종류가 적을수록 읽기 쉽다.
+TIER_MARKERS = ["o", "s", "^"]
 
 OP_COLOR = {
     "add_cc": "#000000",
@@ -259,8 +264,8 @@ def console_summary(df):
 
 
 def plot_level_scaling(df):
-    # 프리셋 × 비용층별 별도 PNG: x=level, y=mean(ms, log), 색=op, 선스타일=library.
-    # 층으로 나눠 op끼리 안 눌리고 Lattigo vs OpenFHE 간격이 잘 보인다.
+    # 프리셋 × 비용층별 별도 PNG: x=level, y=mean(ms), **색=library, 마커=operation, 선은 전부 실선**.
+    # 마커는 채우고 테두리를 없애(mew=0, mec=선색) 마커와 선이 한 획으로 이어져 보이게 한다.
     from matplotlib.lines import Line2D
     for preset in PRESET_ORDER:
         sub = df[df["preset"] == preset]
@@ -270,6 +275,8 @@ def plot_level_scaling(df):
             present = [o for o in ops if not sub[sub["op"] == o].empty]
             if not present:
                 continue
+            # 마커는 티어 내 연산 순서대로 o, s, ^ (light는 연산이 2개라 o, s만 쓰인다).
+            op_marker = {o: TIER_MARKERS[i % len(TIER_MARKERS)] for i, o in enumerate(present)}
             fig, ax = plt.subplots(figsize=(9, 6))
             ymax = 0.0
             for op in present:
@@ -280,22 +287,21 @@ def plot_level_scaling(df):
                     # mean_us/std_us를 ms(÷1000)로 그린다. 원본 데이터는 μs 유지.
                     mean_ms = d["mean_us"].values / 1000.0
                     std_ms = d["std_us"].values / 1000.0
-                    # 선형축이라 대칭 에러바(yerr=std). log_safe_yerr는 로그축 전용이라 미사용.
-                    container = ax.errorbar(
+                    # 에러바 = 표준편차 1배, 캡 스타일. 색은 해당 라이브러리 색.
+                    ax.errorbar(
                         d["level"], mean_ms,
                         yerr=std_ms,
-                        color=OP_COLOR[op],
-                        linestyle=LIB_LS[lib],
-                        marker=LIB_MARKER[lib],
-                        markersize=6, linewidth=2.2,
-                        capsize=2, elinewidth=0.8, ecolor=OP_COLOR[op],
+                        color=LIB_COLOR[lib],
+                        linestyle="-",
+                        marker=op_marker[op],
+                        markersize=6, linewidth=2.0,
+                        markeredgewidth=0, markeredgecolor=LIB_COLOR[lib],
+                        elinewidth=1.2, capsize=3, capthick=1.2,
+                        ecolor=LIB_COLOR[lib],
                     )
-                    for bar in container[2]:  # barlinecols
-                        bar.set_alpha(0.4)
-                    for cap in container[1]:  # caplines
-                        cap.set_alpha(0.6)
                     ymax = max(ymax, float((mean_ms + std_ms).max()))
             # 선형축, 층 데이터에 타이트하게 0부터 시작 → 배수 차이를 정직하게 표시.
+            # mt에서 OpenFHE 에러바가 축을 늘리더라도 그대로 둔다 — 분산이 큰 것 자체가 결과다.
             ax.set_ylim(0, ymax * 1.08)
             ax.set_xlabel("level (remaining multiplicative budget)")
             ax.set_ylabel("mean latency (ms)")
@@ -303,20 +309,21 @@ def plot_level_scaling(df):
                          f"(logN={sub['logN'].iloc[0]})")
             ax.grid(True, which="both", axis="both", color="0.9", linewidth=0.6)
             ax.set_axisbelow(True)
-            # 범례 2개: op=색, library=선스타일 (원본 그대로).
-            op_handles = [Line2D([0], [0], color=OP_COLOR[o], lw=2.5, label=o) for o in present]
-            lib_handles = [
-                *[Line2D([0], [0], color="0.3", lw=2.5, linestyle=LIB_LS[l],
-                         marker=LIB_MARKER[l], label=l) for l in LIB_ORDER],
-            ]
-            # 두 범례 모두 왼쪽에 세로로 배치한다. 곡선이 모두 단조 증가라 왼쪽 위/가운데가
-            # 항상 비어 있는 반면, lower right는 낮게 깔리는 op(예: mul_cp)의 끝점을 가린다
-            # (3자가 되며 범례가 커져 실제로 large·mid에서 가려졌다).
-            leg1 = ax.legend(handles=op_handles, title="operation", loc="upper left",
+
+            # 범례 2개를 좌상단에 세로로 쌓는다. library(색) 위, operation(마커) 아래.
+            lib_handles = [Line2D([0], [0], color=LIB_COLOR[l], lw=2.5, label=l)
+                           for l in LIB_ORDER]
+            op_handles = [Line2D([0], [0], color="0.35", lw=2.0, marker=op_marker[o],
+                                 markersize=6, markeredgewidth=0, label=o) for o in present]
+            leg1 = ax.legend(handles=lib_handles, title="library", loc="upper left",
                              framealpha=0.9)
             ax.add_artist(leg1)
-            ax.legend(handles=lib_handles, title="library", loc="center left",
-                      framealpha=0.9)
+            # leg1의 실제 높이를 재서 그 아래에 붙인다(연산 개수와 무관하게 안정적).
+            fig.canvas.draw()
+            bb = leg1.get_window_extent().transformed(ax.transAxes.inverted())
+            ax.legend(handles=op_handles, title="operation", loc="upper left",
+                      bbox_to_anchor=(bb.x0, bb.y0 - 0.02), framealpha=0.9)
+
             fig.tight_layout()
             out = out_path(f"plot_{preset}_{tier}{SUFFIX}.png")
             fig.savefig(out, dpi=140)
