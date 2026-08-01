@@ -1,8 +1,8 @@
 # PROJECT_CONTEXT.md — HE Library Benchmark 공유 컨텍스트
 
 이 문서는 Claude.ai 프로젝트 지식에만 있던 큰 그림·규칙을 **저장소에 두어 Claude Code와
-양쪽에서 공유**하기 위한 것이다. 측정 API 사실은 `CLAUDE.md`, 환경 구축 절차는
-`SETUP_DKU16C.md`, 실행/프리셋 표는 `README.md`를 참조한다 — 여기서는 **큰 그림과 규칙**
+양쪽에서 공유**하기 위한 것이다. 측정 API 사실은 루트 `CLAUDE.md`, 환경 구축 절차는
+`SETUP_DKU16C.md`(같은 `docs/`), 실행/프리셋 표는 루트 `README.md`를 참조한다 — 여기서는 **큰 그림과 규칙**
 위주로 쓰고, 세부는 중복하지 않고 참조로 넘긴다.
 
 ---
@@ -115,12 +115,12 @@
   **라이브러리 간 비가 1 근처인 판정(교차점 등)에는 이 폭을 반드시 명시한다.**
   제거하려면 설정당 5회 반복 후 per-(level,op) 최소값이 필요하나, 위 **"평균 + 표본표준편차"
   규칙과 충돌하므로 현재는 채택하지 않는다.**
-- **집계 전 물리 정합 게이트를 통과해야 한다**(`aggregate.py physics_gate`) —
+- **집계 전 물리 정합 게이트를 통과해야 한다**(`scripts/aggregate.py physics_gate`) —
   std_us=0 / `relin > mul_cc_rlk` / 1t 레벨 단조성. 임계 근거는 `PARAMS_dku16c.md §7`.
 - **파일명:** `results_{lib}_{preset}_{1t|mt}_{machine}.csv`.
 - **⚠️ dku16c는 코어 고정 + 사전 가열이 필수다.** 코어 단위 DVFS(base 2.2GHz ↔ turbo 3.7GHz,
   비 1.675, 유휴 ~1초면 base 복귀)로 콜드 시작 시 높은 레벨만 부풀려진다.
-  반드시 `run_warm.sh`(핀한 셸에서 가열 후 `exec` 전환)를 거칠 것. 절차·근거는 README 「측정 프로토콜」.
+  반드시 `scripts/run_warm.sh`(핀한 셸에서 가열 후 `exec` 전환)를 거칠 것. 절차·근거는 README 「측정 프로토콜」.
 
 ## 5. 검증 절차 (이전 작업에서 얻은 교훈)
 
@@ -135,7 +135,7 @@
      (Lattigo는 문서값 29.8비트를 실측 29.75비트로 재현하여 하네스 정상 확인)
 2. **파라미터 파탄 시 이등분 격리(bisection)** 로 원인 특정 — 프리셋/레벨/op/스레드/빌드옵션 중
    무엇이 원인인지 반씩 잘라 좁힌다. 추측 대신 실제 메시지·수치.
-3. **aggregate 게이트** — 스키마 게이트(필수 컬럼·허용 preset/op)·**접미사 가드**·증분 CSV 기록.
+3. **aggregate 게이트**(`scripts/aggregate.py`) — 스키마 게이트(필수 컬럼·허용 preset/op)·**접미사 가드**·증분 CSV 기록.
    스키마 안 맞는 파일이 섞이면 필터에서 NaN으로 빠져도 combined CSV엔 남는 "조용한 오염"을 막는다.
 4. **렌더 결과는 반드시 직접 열어볼 것** — **정상 종료 ≠ 그림 정상.** 축·범례·티어 그룹핑을
    눈으로 확인하고, 하드웨어 비교 시 이전 PNG와 나란히 대조.
@@ -146,10 +146,11 @@
 
 - [x] ~~8-op dku16c 2자 측정(12 CSV)~~ — **폐기.** 코어 단위 DVFS 오염이 확인되어
   (최대 3.02배, 파일마다 오염 구간 상이) 아래 3자 재측정본으로 대체했다. 근거는 README 측정 프로토콜.
-- [x] 티어 그룹핑(light/mid/heavy) `aggregate.py` 복원(이식) 및 커밋.
+- [x] 티어 그룹핑(light/mid/heavy) `scripts/aggregate.py` 복원(이식) 및 커밋.
 - [x] **세 번째 라이브러리(Microsoft SEAL) 추가 완료 — 8-op 3자 비교 성립.**
   - **18 CSV**(3프리셋 × {1t,mt} × 3 lib) + `plots/8op/` 24 PNG + 병합/요약 CSV 4.
   - 파라미터 정본: **`PARAMS_dku16c.md`**(런타임 추출).
+  - ⚠️ **이 18 CSV와 24 PNG는 2026-08-01에 `archive/v1/` 로 이동했다** — §7 참조.
   - 부트스트래핑 확장은 `bootstrap-bench` 브랜치에 2자로 보존(단위·의미가 8-op과 달라 별도 집계).
     **SEAL CKKS에는 부트스트래핑이 없다** — 3자로 확장 불가.
 
@@ -177,3 +178,50 @@
     large: `initMod(60); buildAbove(15,45)`
   - ⚠️ 미확인: `setRing(log_degree)`가 13/14/15를 받는지 (기본 프리셋은 전부 logN 16).
   - ⚠️ devkit이 dku16c에 **없음** — 별도 확보 필요, 라이선스 확인 필요. 이 때문에 SEAL을 우선했다.
+
+---
+
+## 7. 저장소 구조 개편 및 v1 아카이브 (2026-08-01)
+
+**§1~§6의 기존 서술은 지우지 않았다.** 아래는 그 서술이 가리키는 산출물의 **위치가 바뀌었다는
+사실**과 **왜 재측정하는가**를 이력으로 남기는 절이다. §1~§6에서 "18 CSV", "`plots/8op/` 24 PNG",
+"결과", "교차점" 등으로 말하는 것은 **전부 `archive/v1/` 의 v1 측정본**을 가리킨다.
+
+### 무엇이 어디로 갔나
+
+평평했던 루트를 역할별로 나눴다. **삭제는 없고 전부 `git mv`** 라 이력이 이어진다.
+
+| 대상 | 이동 후 |
+|------|---------|
+| 측정 CSV 25개 (`results_{lib}_{preset}_{1t\|mt}_dku16c.csv` 18 + `_diag` 2 + 병합/요약 4 + 잔여 1) | `archive/v1/results/` |
+| `plots/8op/` PNG 24장 | `archive/v1/plots/` |
+| 벤치·정밀도·파라미터 덤프 소스 (C++/Go/C) | `src/` |
+| 측정 드라이버(`run_*.sh`)·집계/분석 파이썬 | `scripts/` |
+| `PARAMS_dku16c.md`·`PROJECT_CONTEXT.md`·`SETUP_DKU16C.md`·`SEAL_TASK.md`·`ENV_dku16c.txt` | `docs/` |
+| `README.md`·`CLAUDE.md`·`CMakeLists.txt`·`go.mod`/`go.sum`·`calib`·`build_*/`·`third_party/` | 루트 유지 |
+
+- **`archive/` 는 읽기 전용이다.** 논문 근거 자료이므로 내용을 고치지 않는다.
+  새 측정본은 예전처럼 리포 루트에 떨어지고(`-out`), 집계 산출은 빈 `plots/8op/` 에 쌓인다.
+- `calib` 바이너리만 루트에 남겼다 — `scripts/run_warm.sh`·`run_monitored.sh` 가 `$ROOT/calib`
+  로 참조한다. 소스는 `src/calib.c`.
+- `scripts/crossing_points.py` 의 기본 입력은 `archive/v1/results/` 다. 새 프리셋 측정본을 보려면
+  `RESULTS_DIR=. python3 scripts/crossing_points.py 1t` 처럼 덮어쓴다.
+- 검증: 세 CMake 타깃 재빌드 성공, `scripts/crossing_points.py 1t` 이 개편 전과 동일한 값
+  (large relin **9.13** / rot1 **8.62**, small·medium 교차 없음), `scripts/aggregate.py` 가
+  `archive/v1/results/results_combined_1t_dku16c.csv` 와 `results_summary_std_1t_dku16c.csv` 를
+  바이트 단위로 동일하게 재생성. 스키마·OpenFHE/SEAL 누락·접미사 가드 4종 모두 정상 발동.
+
+### 왜 새 프리셋으로 재측정하는가
+
+**v1 프리셋은 `logQP`를 통제하지 않았다.** §3에 적어 둔 한계가 그대로 재설계 사유다.
+
+- 맞춘 것은 `logQ`(275/505/735)뿐이고, 실효 보안을 결정하는 `logQP`는 각 라이브러리가
+  자동으로 정한 P에 따라 제각각이었다(large: OpenFHE 1035 / Lattigo 855 / SEAL 795).
+- 그 결과 **`large`에서 OpenFHE만 tc128 상한 881을 넘겨 128비트에 미달**했다.
+  `logQ`만 보면 셋 다 이내로 보여 놓치기 쉬운 형태였다.
+- 즉 v1의 3자 비교는 "동일 Q 체인 위의 비교"였을 뿐 **"동일 보안 수준에서의 비교"가 아니다.**
+  key-switch 계열에서 P가 작은 쪽이 얻는 유리함의 일부가 보안 여유를 덜 확보한 대가였다.
+- 새 프리셋은 이 축을 통제하는 것을 목표로 한다. **파라미터는 아직 확정되지 않았고,
+  관련 코드는 작성하지 않았다.** 확정되면 이 절 아래에 v2 프리셋 표를 추가할 것.
+
+⚠️ v1 수치를 v2와 같은 표에 섞지 말 것 — 보안 수준이 다른 두 조건의 값이다.

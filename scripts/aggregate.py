@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
-# aggregate.py — Lattigo/OpenFHE CKKS 벤치 CSV 병합 + 요약표 + 그래프.
-# 입력: results_lattigo.csv, results_openfhe.csv (동일 스키마)
-# 출력: results_combined.csv, plot_<preset>.png (레벨 스케일링), plot_summary.png (라이브러리 비교 막대)
-#       + 콘솔 요약표.
+# aggregate.py — Lattigo/OpenFHE/SEAL CKKS 벤치 CSV 병합 + 요약표 + 그래프.
+# 입력: --lattigo/--openfhe/--seal 로 명시한 CSV 경로들 (동일 스키마).
+#       리포 루트 기준 상대경로로 해석한다 — 구 프리셋(v1)은 archive/v1/results/ 에 있고
+#       새 측정본은 루트에 떨어진다(run_*.sh 의 -out).
+# 출력: plots/8op/ 아래 results_combined<suffix>.csv, results_summary_std<suffix>.csv,
+#       plot_<preset>_<tier><suffix>.png, plot_summary_<tier><suffix>.png + 콘솔 요약표.
+#       (v1 산출물은 archive/v1/{results,plots}/ 로 옮겨졌다 — 새 실행은 빈 plots/8op/ 에 쌓인다.)
 # --suffix로 출력 파일명에 접미사를 붙일 수 있다(예: 단일스레드 재측정본을 덮어쓰지 않고 나란히 보관).
 import argparse
 import glob
@@ -69,14 +72,37 @@ def log_safe_yerr(mean, std):
 SUFFIX = ""  # 출력 파일명 접미사 (main에서 --suffix로 설정)
 THREAD_MODE = "1t"  # --suffix에서 유도. 물리 게이트가 1t/mt를 다르게 검사한다.
 
+# 스크립트가 scripts/ 로 내려갔으므로 CWD 상대 경로는 실행 위치에 따라 깨진다.
+# 입력·출력 모두 리포 루트를 기준으로 해석한다.
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 # 8-op 산출물 디렉터리 (PNG·CSV 공용). 부트스트래핑(plots/boot)·key-switch(plots/ks)와 분리.
 # 같은 실행의 산출물은 한곳에 모은다 — PNG는 여기, CSV는 루트로 흩어지면 짝을 잃는다.
-OUT_DIR = os.path.join("plots", "8op")
+# v1 산출물(PNG 24 + 병합/요약 CSV 4)은 archive/v1/ 로 옮겼으므로 여기는 비어 있다.
+OUT_DIR = os.path.join(ROOT, "plots", "8op")
 
 
 def out_path(name):
     os.makedirs(OUT_DIR, exist_ok=True)
     return os.path.join(OUT_DIR, name)
+
+
+def in_path(path):
+    """입력 CSV 경로 해석: CWD 기준 → 없으면 리포 루트 기준.
+
+    구조 개편(2026-08-01)으로 구 프리셋 CSV는 archive/v1/results/ 로 갔고 스크립트는
+    scripts/ 로 갔다. 루트에서 돌리든 scripts/ 안에서 돌리든 같은 인자가 먹히게 한다.
+    """
+    if os.path.isabs(path) or os.path.exists(path):
+        return path
+    return os.path.join(ROOT, path)
+
+
+def avail_hint(pattern):
+    """가드 메시지용: 루트와 아카이브 양쪽에서 실제로 있는 CSV를 찾아 알려준다."""
+    found = sorted(glob.glob(os.path.join(ROOT, pattern))
+                   + glob.glob(os.path.join(ROOT, "archive", "v1", "results", pattern)))
+    return [os.path.relpath(p, ROOT) for p in found]
 
 
 # 이 스크립트는 8-op 벤치 전용이다. 부트스트래핑(results_boot*)과 key-switch 단건(results_ks*)은
@@ -112,8 +138,11 @@ def load(lattigo_csvs, openfhe_csvs, seal_csvs):
     frames = []
     # Lattigo 입력은 프리셋별로 여러 파일일 수 있다(small/medium/large). 지정된 건 반드시 존재해야 함.
     for path in lattigo_csvs:
+        path = in_path(path)
         if not os.path.exists(path):
-            sys.exit(f"missing {path} — run the benchmarks first")
+            hint = avail_hint("results_lattigo*.csv")
+            hint = ("\n  현재 있는 Lattigo CSV: " + ", ".join(hint)) if hint else ""
+            sys.exit(f"missing {path} — run the benchmarks first{hint}")
         frames.append(read_bench_csv(path))
     # --- OpenFHE 입력 가드 ---
     # 예전엔 파일이 없으면 [note]만 찍고 Lattigo 단독으로 진행했다. 그 조용한 반쪽 실행이
@@ -125,8 +154,9 @@ def load(lattigo_csvs, openfhe_csvs, seal_csvs):
     if not openfhe_csvs:
         sys.exit("[openfhe] --openfhe 미지정. 조용히 Lattigo 단독으로 진행하지 않는다.")
     for path in openfhe_csvs:
+        path = in_path(path)
         if not os.path.exists(path):
-            avail = sorted(glob.glob("results_openfhe*.csv"))
+            avail = avail_hint("results_openfhe*.csv")
             hint = ("\n  현재 있는 OpenFHE CSV: " + ", ".join(avail)) if avail else ""
             sys.exit(
                 f"[openfhe] {path} 없음. 조용히 Lattigo 단독으로 진행하지 않는다 — "
@@ -137,8 +167,9 @@ def load(lattigo_csvs, openfhe_csvs, seal_csvs):
     if not seal_csvs:
         sys.exit("[seal] --seal 미지정. 조용히 2자 비교로 진행하지 않는다.")
     for path in seal_csvs:
+        path = in_path(path)
         if not os.path.exists(path):
-            avail = sorted(glob.glob("results_seal*.csv"))
+            avail = avail_hint("results_seal*.csv")
             hint = ("\n  현재 있는 SEAL CSV: " + ", ".join(avail)) if avail else ""
             sys.exit(f"[seal] {path} 없음. 3자 비교인데 조용히 2자로 진행하지 않는다.{hint}")
         frames.append(read_bench_csv(path))

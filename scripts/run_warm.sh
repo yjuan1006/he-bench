@@ -16,10 +16,13 @@
 # 사용법:
 #   run_warm.sh <core_spec> <n_warm_threads> <warm_sec> <probe_prefix> <cmd...>
 # 예:
-#   run_warm.sh 12    1  30 traces/of_1t  ./build_openfhe/openfhe_bench -preset small ...
-#   run_warm.sh 0-15 16  30 traces/of_mt  ./build_openfhe/openfhe_bench -preset small ...
+#   scripts/run_warm.sh 12    1  30 traces/of_1t  ./build_openfhe/openfhe_bench -preset small ...
+#   scripts/run_warm.sh 0-15 16  30 traces/of_mt  ./build_openfhe/openfhe_bench -preset small ...
 set -u
+# 스크립트는 scripts/ 에 있고 calib 바이너리는 리포 루트에 있다(2026-08-01 구조 개편).
+# ROOT = 리포 루트, HERE = scripts/.
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "$HERE/.." && pwd)"
 
 CORES=$1; NTHREADS=$2; WARM=$3; PROBE=$4; shift 4
 mkdir -p "$(dirname "$PROBE")"
@@ -27,7 +30,7 @@ mkdir -p "$(dirname "$PROBE")"
 # 핀한 셸 안에서: 가열 → 사전 프로브 → exec.
 # 사전 프로브도 같은 핀된 코어에서 돌므로 그 자체가 코어를 계속 바쁘게 유지한다.
 taskset -c "$CORES" bash -c '
-  HERE="$1"; NT="$2"; WARM="$3"; PROBE="$4"; shift 4
+  ROOT="$1"; NT="$2"; WARM="$3"; PROBE="$4"; shift 4
   pids=""
   i=1
   while [ "$i" -lt "$NT" ]; do
@@ -39,12 +42,12 @@ taskset -c "$CORES" bash -c '
   end=$((SECONDS+WARM)); while [ $SECONDS -lt $end ]; do :; done
   for p in $pids; do wait "$p" 2>/dev/null; done
   # 사전 프로브: 유휴 틈 없이 바로 이어서
-  "$HERE/calib" 1 > "${PROBE}_pre.txt" 2>/dev/null
+  "$ROOT/calib" 1 > "${PROBE}_pre.txt" 2>/dev/null
   exec "$@"
-' _ "$HERE" "$NTHREADS" "$WARM" "$PROBE" "$@"
+' _ "$ROOT" "$NTHREADS" "$WARM" "$PROBE" "$@"
 rc=$?
 
 # 사후 프로브: 벤치가 방금까지 코어를 점유했으므로 즉시 재면 turbo 상태여야 한다
-taskset -c "$CORES" "$HERE/calib" 1 > "${PROBE}_post.txt" 2>/dev/null
+taskset -c "$CORES" "$ROOT/calib" 1 > "${PROBE}_post.txt" 2>/dev/null
 
 exit "$rc"

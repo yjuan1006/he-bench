@@ -1,13 +1,17 @@
 #!/usr/bin/env bash
 # SEAL 6개 CSV를 openfhe·lattigo와 같은 세션 조건으로 재측정.
-# ★ seal_bench.cpp 는 수정하지 않는다 — 코드 변경이 아니라 세션 정합이 목적이다.
+# ★ src/seal_bench.cpp 는 수정하지 않는다 — 코드 변경이 아니라 세션 정합이 목적이다.
 #
-# 조건은 직전 relin 재측정(run_relin_remeasure.sh)과 동일:
-#   run_warm.sh 경유 · 코어 12 고정 · reps 30 · warmup 3 · 채택/기각 없음
+# 조건은 직전 relin 재측정(scripts/run_relin_remeasure.sh)과 동일:
+#   scripts/run_warm.sh 경유 · 코어 12 고정 · reps 30 · warmup 3 · 채택/기각 없음
 #   SEAL은 내부 병렬화가 없어 1t/mt 모두 단일 코어 고정(run_all_dku16c.sh와 같은 취급).
 #   가열은 래퍼가 하므로 seal_bench 자체 -warmsec 은 0.
 set -u
-cd /data/yja/he-bench
+# 스크립트가 scripts/ 로 내려갔다(2026-08-01 구조 개편). 산출 CSV는 예전처럼 리포 루트에
+# 떨어져야 하므로 BASH_SOURCE 로 루트를 되짚어 cd 한다(하드코딩 경로 대체).
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "$HERE/.." && pwd)"
+cd "$ROOT"
 SB=/tmp/claude-1000/-data/e7b62f21-7738-4bab-bc47-bcb86cb6afd9/scratchpad
 TR="$SB/seal_resession"; mkdir -p "$TR"
 WARM=30
@@ -19,10 +23,10 @@ for p in small medium large; do
     out="results_seal_${p}_${th}_dku16c.csv"
     pr="$TR/seal_${p}_${th}"
     echo "### seal $p $th -> $out"
-    ./run_warm.sh "$CORE" 1 "$WARM" "$pr" \
+    "$HERE/run_warm.sh" "$CORE" 1 "$WARM" "$pr" \
       ./build_seal/seal_bench -preset "$p" -reps 30 -warmup 3 -warmsec 0 \
       -machine dku16c -threads "$th" -sweep desc -out "$out" >/dev/null 2>&1
-    python3 probe_check.py "$pr" || echo "  !! 프로브가 fast 밴드를 벗어났다"
+    python3 "$HERE/probe_check.py" "$pr" || echo "  !! 프로브가 fast 밴드를 벗어났다"
   done
   git add -f results_seal_${p}_*_dku16c.csv
   git commit -q -m "measure: ${p} SEAL 세션 정합 재측정 (dku16c)

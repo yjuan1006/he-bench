@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SEAL/OpenFHE 교차점 산출 — PARAMS_dku16c.md §4.1의 정본 계산.
+"""SEAL/OpenFHE 교차점 산출 — docs/PARAMS_dku16c.md §4.1의 정본 계산.
 
 비 r(L) = SEAL(L) / OpenFHE(L) 를 L=1..maxLevel 로 훑어
 (r[i]-1)(r[i+1]-1) < 0 인 **첫** 구간에서 선형보간한다.
@@ -17,15 +17,25 @@
 ±2% 감도를 함께 낸다 — 이 머신의 실행 간 변동 바닥(PARAMS §6.5).
 """
 import csv
+import os
 import sys
 
 MAXL = {"small": 5, "medium": 10, "large": 15}
 DRIFT = 0.02  # 실행 간 변동 바닥
 
+# 이 스크립트가 읽는 CSV의 위치. 스크립트가 scripts/ 로 내려갔으므로 CWD 상대 경로를
+# 쓰면 어디서 실행하느냐에 따라 깨진다 → 항상 리포 루트 기준으로 해석한다.
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# 구 프리셋(v1) 측정본은 2026-08-01 구조 개편에서 archive/v1/results/ 로 옮겼다.
+# 새 프리셋 측정본을 볼 때는 RESULTS_DIR 환경변수로 덮어쓴다.
+#   RESULTS_DIR=. python3 scripts/crossing_points.py 1t
+RESULTS_DIR = os.environ.get("RESULTS_DIR", os.path.join("archive", "v1", "results"))
+
 
 def load(lib, preset, th="1t"):
     d = {}
-    with open(f"results_{lib}_{preset}_{th}_dku16c.csv") as fh:
+    path = os.path.join(ROOT, RESULTS_DIR, f"results_{lib}_{preset}_{th}_dku16c.csv")
+    with open(path) as fh:
         for r in csv.DictReader(fh):
             d[(int(r["level"]), r["op"])] = float(r["mean_us"])
     return d
@@ -43,7 +53,7 @@ def crossings(num, den, op, maxlevel, scale=1.0):
 
 
 def main(th="1t"):
-    print(f"SEAL / OpenFHE 교차점 ({th}) — 첫 교차를 취한다")
+    print(f"SEAL / OpenFHE 교차점 ({th}) — 첫 교차를 취한다  [입력: {RESULTS_DIR}/]")
     print(f"{'preset':8}{'op':7}{'교차':>9}{'−2%':>9}{'+2%':>9}{'교차횟수':>9}   L1 / Lmax")
     for preset in ["small", "medium", "large"]:
         M = MAXL[preset]

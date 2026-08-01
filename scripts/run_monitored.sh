@@ -12,15 +12,17 @@
 #   2) 측정 중 캘리브레이션 모니터 → 전 구간 fast 밴드일 때만 채택, 아니면 재시도
 #
 # 사용법:
-#   run_monitored.sh <warm_sec> <max_tries> <trace_prefix> <cmd...>
+#   scripts/run_monitored.sh <warm_sec> <max_tries> <trace_prefix> <cmd...>
 # 종료:
 #   0 = 채택된 실행 있음 (cmd의 -out 파일이 유효)
 #   1 = max_tries 안에 채택 실패
 # 표준출력 마지막 줄: "TRIES=<시도수> REJECTS=<기각수>"
 
 set -u
+# HERE = scripts/ (clock_verdict.py 가 있는 곳), ROOT = 리포 루트(calib 바이너리가 있는 곳).
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CALIB="${CALIB_BIN:-$HERE/calib}"
+ROOT="$(cd "$HERE/.." && pwd)"
+CALIB="${CALIB_BIN:-$ROOT/calib}"
 MONCORE="${MONCORE:-15}"     # 모니터 전용 코어. 측정은 핀하지 않는다.
 # 전 코어를 데운다. 램프는 코어 단위이고(실측: 핫 코어 83ms / 콜드 코어 138ms 동시 관측),
 # 측정 프로세스는 핀하지 않으므로 어느 코어에 올라가도 핫이어야 한다.

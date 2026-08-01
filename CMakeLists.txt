@@ -30,7 +30,7 @@ if(BENCH_OPENFHE)
     string(REPLACE "-Werror" "" OPENFHE_BENCH_CXX_FLAGS "${OpenFHE_CXX_FLAGS}")
     separate_arguments(OPENFHE_BENCH_CXX_FLAGS_LIST UNIX_COMMAND "${OPENFHE_BENCH_CXX_FLAGS}")
 
-    add_executable(openfhe_bench openfhe_bench.cpp)
+    add_executable(openfhe_bench src/openfhe_bench.cpp)
     target_compile_options(openfhe_bench PRIVATE ${OPENFHE_BENCH_CXX_FLAGS_LIST})
     target_include_directories(openfhe_bench PRIVATE
         ${OPENMP_INCLUDES}
@@ -51,14 +51,14 @@ endif()
 # Microsoft SEAL
 # --------------------------------------------------------------------------
 # CMAKE_PREFIX_PATH=third_party/SEAL/install 로 configure 할 것.
-# HEXL은 반드시 OFF 상태로 빌드된 SEAL이어야 한다 (PROJECT_CONTEXT.md §2):
+# HEXL은 반드시 OFF 상태로 빌드된 SEAL이어야 한다 (docs/PROJECT_CONTEXT.md §2):
 # dku16c는 AVX-512가 있어 HEXL을 켜면 SEAL만 부당하게 유리해진다.
 if(BENCH_SEAL)
     find_package(SEAL 4.3 REQUIRED)
     if(SEAL_USE_INTEL_HEXL)
         message(FATAL_ERROR
             "Installed SEAL was built with Intel HEXL ON. "
-            "Baseline requires HEXL OFF (PROJECT_CONTEXT.md §2). Rebuild SEAL with "
+            "Baseline requires HEXL OFF (docs/PROJECT_CONTEXT.md §2). Rebuild SEAL with "
             "-DSEAL_USE_INTEL_HEXL=OFF, or tag the outputs with _hexl and keep them separate.")
     endif()
 
@@ -73,11 +73,11 @@ if(BENCH_SEAL)
     endif()
     message(STATUS "SEAL ${SEAL_VERSION} -> ${SEAL_TARGET} (HEXL=${SEAL_USE_INTEL_HEXL})")
 
-    add_executable(seal_bench seal_bench.cpp)
+    add_executable(seal_bench src/seal_bench.cpp)
     target_compile_options(seal_bench PRIVATE -Wall -O3)
     target_link_libraries(seal_bench ${SEAL_TARGET})
 
-    add_executable(seal_precision seal_precision.cpp)
+    add_executable(seal_precision src/seal_precision.cpp)
     target_compile_options(seal_precision PRIVATE -Wall -O3)
     target_link_libraries(seal_precision ${SEAL_TARGET})
 endif()

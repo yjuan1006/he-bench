@@ -2,11 +2,15 @@
 # relin 직접 계측 전환에 따른 openfhe·lattigo 12개 CSV 재측정.
 # ★ SEAL 6개는 원래부터 직접 계측이라 재측정하지 않는다.
 #
-# 조건은 직전 본측정(run_all_dku16c.sh)과 동일:
-#   run_warm.sh 경유 · 코어 12 고정(openfhe mt만 0-15 + 16스레드 가열)
+# 조건은 직전 본측정(scripts/run_all_dku16c.sh)과 동일:
+#   scripts/run_warm.sh 경유 · 코어 12 고정(openfhe mt만 0-15 + 16스레드 가열)
 #   reps 30 · warmup 3 · 채택/기각 장치 없음
 set -u
-cd /data/yja/he-bench
+# 스크립트가 scripts/ 로 내려갔다(2026-08-01 구조 개편). 산출 CSV는 예전처럼 리포 루트에
+# 떨어져야 하므로 BASH_SOURCE 로 루트를 되짚어 cd 한다(하드코딩 경로 대체).
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "$HERE/.." && pwd)"
+cd "$ROOT"
 export LD_LIBRARY_PATH="/data/yja/openfhe-install/lib:${LD_LIBRARY_PATH:-}"
 export PATH="$HOME/.local/go/bin:$PATH"
 
@@ -31,14 +35,14 @@ for p in small medium large; do
       echo "### $lib $p $th -> $out (cores=$cores warm=$nwarm)"
       if [ "$lib" = "openfhe" ]; then
         if [ "$th" = "1t" ]; then export OMP_NUM_THREADS=1; else unset OMP_NUM_THREADS; fi
-        ./run_warm.sh "$cores" "$nwarm" "$WARM" "$pr" \
+        "$HERE/run_warm.sh" "$cores" "$nwarm" "$WARM" "$pr" \
           ./build_openfhe/openfhe_bench -preset "$p" -reps 30 -out "$out" >/dev/null 2>&1
       else
         if [ "$th" = "1t" ]; then export GOMAXPROCS=1; else unset GOMAXPROCS; fi
-        ./run_warm.sh "$cores" "$nwarm" "$WARM" "$pr" \
-          go run lattigo_bench.go -preset "$p" -reps 30 -out "$out" >/dev/null 2>&1
+        "$HERE/run_warm.sh" "$cores" "$nwarm" "$WARM" "$pr" \
+          go run src/lattigo_bench.go -preset "$p" -reps 30 -out "$out" >/dev/null 2>&1
       fi
-      python3 probe_check.py "$pr" || echo "  !! 프로브가 fast 밴드를 벗어났다"
+      python3 "$HERE/probe_check.py" "$pr" || echo "  !! 프로브가 fast 밴드를 벗어났다"
     done
   done
   # SEAL CSV는 건드리지 않는다 — openfhe·lattigo만 스테이징

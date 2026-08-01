@@ -17,7 +17,7 @@
 | SEAL | `SEALContext` 체인 walk (`context_data->parms().coeff_modulus()`, `chain_index()`) | 특수 소수 1개(60비트)를 우리가 **명시 고정**. digit 수 = 해당 레벨의 데이터 프라임 수 = `level+1` |
 | 128비트 상한 | `seal::CoeffModulus::MaxBitCount(N, sec_level_type::tc128)` | 실측: N=8192→**218**, 16384→**438**, 32768→**881** |
 
-추출 도구는 저장소에 있다: `param_dump_openfhe.cpp`, `param_dump_lattigo.go`
+추출 도구는 저장소에 있다: `src/param_dump_openfhe.cpp`, `src/param_dump_lattigo.go`
 (둘 다 벤치마크를 실행하지 않고 파라미터만 덤프한다).
 
 ---
@@ -220,9 +220,9 @@ digit이 3→2, 2→1로 떨어지는 지점에서 OpenFHE 비용이 **26%·33% 
 
 ## 5. key-switch 정밀도 실측 (2026-07-26)
 
-프로그램: `openfhe_precision.cpp` / `lattigo_precision.go` / `seal_precision.cpp`.
-★ `openfhe_bench.cpp`·`lattigo_bench.go`는 수정하지 않고 독립 프로그램으로 만들었다.
-절차 통일: 입력 벡터·오차 정의는 `precision_common.h` 규약(xorshift64*, 시드
+프로그램: `src/openfhe_precision.cpp` / `src/lattigo_precision.go` / `src/seal_precision.cpp`.
+★ `src/openfhe_bench.cpp`·`src/lattigo_bench.go`는 수정하지 않고 독립 프로그램으로 만들었다.
+절차 통일: 입력 벡터·오차 정의는 `src/precision_common.h` 규약(xorshift64*, 시드
 `0x2026072500000001`). **C++/Go 수열이 비트 단위로 일치함을 확인**했다.
 레벨 진입은 스케일 불변 drop으로 통일(SEAL `mod_switch_to` / OpenFHE `LevelReduce` /
 Lattigo `DropLevel`). 측정 조건은 본측정과 동일(`run_warm.sh`, 코어 12 고정), 5회 반복.
@@ -409,7 +409,7 @@ out-of-place relinearize를 반복(입력 무오염). 신규 코드는 기존 7�
 |------|----------------------|
 | **현재 CSV(2026-07-26 이후)** | **가능.** 세 라이브러리 전부 std_us > 0 (중앙값 lattigo 145 / openfhe 993 / seal 208 μs) |
 | 2026-07-26 이전 openfhe·lattigo CSV | **불가.** std_us = 0은 측정값이 아니라 상수다 |
-| `plots/8op` 이전 판 PNG | relin 에러바가 lattigo·openfhe만 길이 0 |
+| `archive/v1/plots` 이전 판 PNG | relin 에러바가 lattigo·openfhe만 길이 0 |
 
 ⚠️ **CV 통계 주의**: 과거에 보고된 "OpenFHE mt key-switch CV 0.18~0.52"는 인공적인 0이
 섞여 낮게 나온 값이다. relin 제외 시 중앙값 0.206 → 0.321이었다. **현재 CSV에는 이 문제가

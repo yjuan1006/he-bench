@@ -9,21 +9,21 @@
 #   3) Python venv          → pandas + matplotlib
 #   4) 검증                 → lscpu / nproc / free -g / go version / 빌드 산출물
 #
-# 벤치 재측정(step 5)은 이 스크립트가 하지 않는다. SETUP_DKU16C.md의
+# 벤치 재측정(step 5)은 이 스크립트가 하지 않는다. docs/SETUP_DKU16C.md의
 # "재측정 매트릭스"를 참고할 것.
 #
 # 사용법:
-#   cd /data/he-bench            # 리포를 여기에 clone 했다고 가정
-#   ./setup_dku16c.sh            # 전체 실행
-#   ./setup_dku16c.sh verify     # 검증 단계만 다시 실행
+#   cd /data/yja/he-bench            # 리포를 여기에 clone 했다고 가정
+#   ./scripts/setup_dku16c.sh        # 전체 실행
+#   ./scripts/setup_dku16c.sh verify # 검증 단계만 다시 실행
 #
 # 경로는 아래 환경변수로 덮어쓸 수 있다:
 #   GOROOT_TARGET, OPENFHE_SRC, OPENFHE_INSTALL, VENV_DIR
 ###############################################################################
 set -euo pipefail
 
-# --- 이 스크립트가 위치한 디렉터리 = 리포 루트로 간주 -------------------------
-REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# --- 스크립트는 scripts/ 에 있고 리포 루트는 그 상위다 (2026-08-01 구조 개편) ----
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # --- 설정 (환경변수로 덮어쓰기 가능) -----------------------------------------
 GO_VERSION="1.24.5"
@@ -80,7 +80,7 @@ install_openfhe() {
     mkdir -p "${OPENFHE_SRC}/build"
     ( cd "${OPENFHE_SRC}/build"
       # ── epyc4t 빌드와 동일한 cmake 옵션 ──────────────────────────────────
-      # WITH_INTEL_HEXL 은 기본 OFF (근거: SETUP_DKU16C.md §1 참고).
+      # WITH_INTEL_HEXL 은 기본 OFF (근거: docs/SETUP_DKU16C.md §1 참고).
       cmake \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX="${OPENFHE_INSTALL}" \
@@ -120,7 +120,8 @@ install_venv() {
 # 4) 검증
 ###############################################################################
 verify() {
-  local report="${REPO_DIR}/ENV_dku16c.txt"
+  local report="${REPO_DIR}/docs/ENV_dku16c.txt"
+  mkdir -p "$(dirname "${report}")"
   log "환경 검증 → ${report} 에도 기록"
   {
     echo "# he-bench 환경 검증 — dku16c"
@@ -145,7 +146,7 @@ verify() {
 
   # --- 빌드 산출물 확인: 두 벤치를 실제로 빌드해 본다 ------------------------
   log "빌드 산출물 확인 — Lattigo"
-  ( cd "${REPO_DIR}" && "${GOROOT_TARGET}/bin/go" build -o /tmp/lattigo_bench_check lattigo_bench.go \
+  ( cd "${REPO_DIR}" && "${GOROOT_TARGET}/bin/go" build -o /tmp/lattigo_bench_check src/lattigo_bench.go \
       && echo "OK: lattigo_bench 빌드 성공" ) || warn "Lattigo 빌드 실패 — 로그 확인"
 
   log "빌드 산출물 확인 — OpenFHE"
@@ -155,7 +156,7 @@ verify() {
       && test -x ./openfhe_bench \
       && echo "OK: openfhe_bench 빌드 성공" ) || warn "OpenFHE 벤치 빌드 실패 — 로그 확인"
 
-  log "검증 완료. ${report} 의 CPU 스펙을 README에 기록할 것 (SETUP_DKU16C.md §4)."
+  log "검증 완료. ${report} 의 CPU 스펙을 README에 기록할 것 (docs/SETUP_DKU16C.md §4)."
 }
 
 ###############################################################################

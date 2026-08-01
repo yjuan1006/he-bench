@@ -126,8 +126,8 @@ done
 
 # ── Lattigo (Go) ──────────────────────────────────────────────────────────
 for p in small medium large; do
-  go run lattigo_bench.go -preset $p -reps 30 -out results_lattigo_${p}_mt_dku16c.csv
-  GOMAXPROCS=1 go run lattigo_bench.go -preset $p -reps 30 -out results_lattigo_${p}_1t_dku16c.csv
+  go run src/lattigo_bench.go -preset $p -reps 30 -out results_lattigo_${p}_mt_dku16c.csv
+  GOMAXPROCS=1 go run src/lattigo_bench.go -preset $p -reps 30 -out results_lattigo_${p}_1t_dku16c.csv
 done
 
 # ── 집계 + 그래프 ─────────────────────────────────────────────────────────
@@ -145,5 +145,5 @@ done
 - [ ] `go version` → `go1.24.5`
 - [ ] `ENV_dku16c.txt` 생성됨 → **CPU 스펙을 README에 기록** (`## 측정 환경` 절 추가)
 - [ ] `build_openfhe/openfhe_bench` 빌드 성공
-- [ ] `go build lattigo_bench.go` 성공
+- [ ] `go build src/lattigo_bench.go` 성공
 - [ ] `./.venv/bin/python -c "import pandas, matplotlib"` 통과

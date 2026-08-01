@@ -3,11 +3,11 @@
 CKKS 연산의 **암호문 1개 기준** latency를 OpenFHE(C++) · Lattigo(Go) · Microsoft SEAL(C++)
 세 라이브러리에서 측정·비교한다.
 
-> 파라미터 정본(logQ/logP/logQP·레벨별 digit 수·보안 여유)은 **`PARAMS_dku16c.md`** 참조.
+> 파라미터 정본(logQ/logP/logQP·레벨별 digit 수·보안 여유)은 **`docs/PARAMS_dku16c.md`** 참조.
 
 ## 측정 환경
 
-**dku16c** (현재 baseline, 파일 태그 `_dku16c`) — `ENV_dku16c.txt` 참조.
+**dku16c** (현재 baseline, 파일 태그 `_dku16c`) — `docs/ENV_dku16c.txt` 참조.
 
 | 항목 | 값 |
 |------|-----|
@@ -27,10 +27,27 @@ CKKS 연산의 **암호문 1개 기준** latency를 OpenFHE(C++) · Lattigo(Go) 
 > 소스/설치는 `third_party/SEAL/`(`.gitignore` 대상).
 > 이전 baseline은 **epyc4t**(AMD EPYC 7643, 2물리코어×SMT2 = 4스레드), 파일 태그 `_epyc4t`.
 
+## 저장소 구조
+
+2026-08-01 개편. 구 프리셋(v1) 측정 결과는 전부 `archive/v1/` 로 보존했고 코드는 역할별로 나눴다.
+
+```
+src/          벤치·정밀도·파라미터 덤프 소스 (C++ / Go / C)
+scripts/      측정 드라이버(run_*.sh) · 집계/분석 (aggregate.py, crossing_points.py …)
+docs/         PARAMS_dku16c.md · PROJECT_CONTEXT.md · SETUP_DKU16C.md · SEAL_TASK.md · ENV_dku16c.txt
+archive/v1/   구 프리셋 측정본 — results/ (CSV 25) · plots/ (PNG 24). **읽기 전용, 논문 근거 자료**
+plots/8op/    새 실행의 집계 산출물이 쌓이는 곳 (v1 산출물을 아카이브로 옮겨 현재 비어 있음)
+루트          README.md · CLAUDE.md · CMakeLists.txt · go.mod/go.sum · calib · build_*/ · third_party/
+```
+
+`calib`(클럭 프로브 바이너리)만 루트에 남는다 — `scripts/run_warm.sh`·`run_monitored.sh`가
+`$ROOT/calib` 로 참조한다. 소스는 `src/calib.c`.
+
 ### 결과 파일 규칙
 
 `results_{lib}_{preset}_{1t|mt}_{machine}.csv` — `lib`∈{openfhe,lattigo,**seal**}, `preset`∈{small,medium,large}.
-현재 dku16c는 **18개**(3 lib × 3 preset × {1t,mt}).
+새 측정본은 리포 **루트**에 떨어지고(드라이버의 `-out`), 확정되면 아카이브로 옮긴다.
+v1 dku16c는 **18개**(3 lib × 3 preset × {1t,mt}) + 진단본 2 + 잔여 1 = `archive/v1/results/` 에 25개.
 - `mt` = 멀티스레드(기본): OpenFHE 기본 OpenMP / Lattigo 기본
 - `1t` = 싱글스레드: OpenFHE `OMP_NUM_THREADS=1` / Lattigo `GOMAXPROCS=1`
   (Go에는 `OMP_NUM_THREADS`가 무효이므로 반드시 `GOMAXPROCS=1`)
@@ -38,7 +55,8 @@ CKKS 연산의 **암호문 1개 기준** latency를 OpenFHE(C++) · Lattigo(Go) 
   실제로 병렬화되는 것은 OpenFHE뿐(mt/1t = 0.80/0.47/0.37).
 
 집계는 스레드 모드별로 분리한다(스키마에 스레드 컬럼이 없어 mt/1t를 한 파일에 합치면 충돌):
-`aggregate.py --lattigo <...> --openfhe <...> --seal <...> --suffix _MODE_dku16c`.
+`python3 scripts/aggregate.py --lattigo <...> --openfhe <...> --seal <...> --suffix _MODE_dku16c`.
+출력은 `plots/8op/` 에 쌓인다(구 프리셋 산출물은 `archive/v1/` 로 옮겨져 비어 있다).
 `--seal`도 `--openfhe`와 같은 입력 가드가 걸려 있다(지정 누락 시 조용히 2자로 진행하지 않고 중단).
 
 ## 실행 방법
@@ -46,18 +64,18 @@ CKKS 연산의 **암호문 1개 기준** latency를 OpenFHE(C++) · Lattigo(Go) 
 18개 CSV 전체는 드라이버로 돌린다(프리셋마다 자동 커밋):
 
 ```bash
-./run_all_dku16c.sh          # 3 lib × 3 preset × {1t,mt} = 18 CSV
+./scripts/run_all_dku16c.sh   # 3 lib × 3 preset × {1t,mt} = 18 CSV
 ```
 
 개별 실행은 반드시 **코어 고정 + 사전 가열 래퍼**를 거친다(아래 측정 프로토콜 참조):
 
 ```bash
 # <고정코어> <가열스레드> <가열초> <프로브경로> -- 실행할 명령
-./run_warm.sh 12 1 30 traces/of ./build_openfhe/openfhe_bench -preset large -reps 30 -out OUT.csv
-./run_warm.sh 12 1 30 traces/la go run lattigo_bench.go       -preset large -reps 30 -out OUT.csv
-./run_warm.sh 12 1 30 traces/se ./build_seal/seal_bench -preset large -reps 30 -warmup 3 -warmsec 0 \
+./scripts/run_warm.sh 12 1 30 traces/of ./build_openfhe/openfhe_bench -preset large -reps 30 -out OUT.csv
+./scripts/run_warm.sh 12 1 30 traces/la go run src/lattigo_bench.go   -preset large -reps 30 -out OUT.csv
+./scripts/run_warm.sh 12 1 30 traces/se ./build_seal/seal_bench -preset large -reps 30 -warmup 3 -warmsec 0 \
                                 -machine dku16c -threads 1t -sweep desc -out OUT.csv
-python3 probe_check.py traces/of      # 측정 전/후 클럭이 fast 밴드였는지 확인
+python3 scripts/probe_check.py traces/of   # 측정 전/후 클럭이 fast 밴드였는지 확인
 ```
 
 빌드: `cmake -S . -B build_openfhe -DCMAKE_PREFIX_PATH=/data/yja/openfhe-install`,
@@ -90,12 +108,12 @@ turbo(3.7 GHz)에 도달하며 유휴 약 1초면 base로 되돌아간다(**비 
 시작하므로 콜드 상태로 시작하면 **높은 레벨만 선택적으로 부풀려져 레벨-지연 기울기가 가짜로
 가팔라진다.** 실제로 이 편향이 이전 12개 CSV를 오염시켰다(최대 3.02배, 파일마다 오염 구간이 달랐다).
 
-- **대책: 코어 고정 + 사전 가열.** `run_warm.sh`가 `taskset`으로 핀한 셸 안에서 30초 가열한 뒤
+- **대책: 코어 고정 + 사전 가열.** `scripts/run_warm.sh`가 `taskset`으로 핀한 셸 안에서 30초 가열한 뒤
   **`exec`으로 벤치 바이너리로 전환**한다. 새 프로세스를 띄우면 그 틈에 base로 떨어지므로 exec이 필수다.
 - **채택/기각 장치는 쓰지 않는다.** 전용 코어의 모니터는 측정 프로세스가 올라간 코어의 상태를
   원리적으로 알 수 없고(오염된 실행을 통과시킨 사례 확인), mt에서는 코어를 뺏어 OpenFHE의 OMP
   조건을 깨뜨린다(rot1/relin 4.3~5.2배 왜곡). 대신 측정 **직전/직후에만** 캘리브레이션 프로브를
-  1회씩 재어 기록한다(`probe_check.py`). 18개 실행 × 전후 36개 프로브 전부 fast 밴드(82.5~82.9 ms)였다.
+  1회씩 재어 기록한다(`scripts/probe_check.py`). 18개 실행 × 전후 36개 프로브 전부 fast 밴드(82.5~82.9 ms)였다.
 - 고정 코어: 단일스레드 실행은 **코어 12**, OpenFHE mt만 **전 코어(0–15) 고정 + 전 코어 가열**.
 - 수용 검사 통과 기준(asc/desc 방향 편향): small 0.62% · medium 0.55%, 상/하 비 1.00±0.01.
 
@@ -118,19 +136,19 @@ turbo(3.7 GHz)에 도달하며 유휴 약 1초면 base로 되돌아간다(**비 
   - **세 프리셋 모두 OpenFHE가 상한에서 가장 멀다** — 같은 Q 위에 가장 큰 P를 얹기 때문이다.
     (여유 순서는 medium·large가 OpenFHE < Lattigo < SEAL, small은 Lattigo가 SEAL보다 5비트 앞선다.)
   - 즉 **Q는 비트 단위로 맞췄으나 보안 수준까지 정합되지는 않았다.** 3자 비교는 "동일 Q 체인
-    위의 비교"이지 "동일 보안 수준에서의 비교"가 아니다. 자세한 근거는 `PARAMS_dku16c.md`.
+    위의 비교"이지 "동일 보안 수준에서의 비교"가 아니다. 자세한 근거는 `docs/PARAMS_dku16c.md`.
 - **SEAL의 특수소수는 자동 결정되지 않아 60비트 1개로 명시 고정**했다(SEAL 관례상 최대 프라임 크기).
   위 logQP 차이의 직접 원인이므로 발표 각주에 반드시 명시할 것.
 - **key-switch 계열은 "동일 조건"이 아니라 "비교 가능"이다.** P와 digit 분해 구조가 셋 다 다르다.
   digit 수는 세 라이브러리 모두 레벨의 함수이며 증가 기울기가 다르다(SEAL 1.00 / Lattigo 0.50 /
-  OpenFHE 0.17~0.50, 3에서 포화). `PARAMS_dku16c.md` 참조.
+  OpenFHE 0.17~0.50, 3에서 포화). `docs/PARAMS_dku16c.md` 참조.
 - **스레딩 비대칭:** 실제로 단건 연산을 병렬화하는 것은 **OpenFHE뿐**이다(mt/1t = 0.80/0.47/0.37).
   Lattigo·SEAL은 내부 병렬화가 없어 `mt ≈ 1t`(0.99~1.01).
   ⚠️ mt에서 OpenFHE만 분산이 크다 — key-switch 계열 CV 중앙값이 1t 0.004~0.008 대비
   **mt 0.18~0.52(최대 1.23)**. OMP 스케줄링 지터이므로 **에러바 크기가 다른 계열을 같은 근거로
   쓰지 말 것.** 레벨 대비 기울기 분석은 전부 1t로만 수행했다.
 - 최적화 빌드에서만 측정 (Go 기본 / C++ `-O3 -DNDEBUG`). 타이밍은 연산 1회만 감싼다.
-- 측정 전 반드시 `run_warm.sh`를 거칠 것 — 위 "측정 프로토콜" 참조.
+- 측정 전 반드시 `scripts/run_warm.sh`를 거칠 것 — 위 "측정 프로토콜" 참조.
 
 <sup>주) SEAL `large`의 최상위 레벨 `add_cc`/`add_cp`는 추세 대비 1.3~1.5배 높다. 세 피연산자
 작업 세트가 약 23~24 MB를 넘는 지점과 일치하며, 버퍼 정렬·2의 거듭제곱 크기와는 무관함을

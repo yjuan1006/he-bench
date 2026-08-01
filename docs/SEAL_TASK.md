@@ -60,7 +60,7 @@ cmake --install build
 > 조건을 통일하는 편이 낫다.
 
 컴파일은 **루트 `CMakeLists.txt`에 타깃을 추가하는 방식**으로 한다.
-`openfhe_bench.cpp` 타깃이 어떻게 정의돼 있는지 먼저 읽고 같은 패턴으로 `seal_bench`를 추가할 것
+`src/openfhe_bench.cpp` 타깃이 어떻게 정의돼 있는지 먼저 읽고 같은 패턴으로 `seal_bench`를 추가할 것
 (빌드 디렉터리 관례도 `build_openfhe/`를 따라 `build_seal/` 등으로 맞춘다).
 
 SEAL은 `find_package(SEAL 4.3 REQUIRED)` + `target_link_libraries(seal_bench SEAL::seal)`로 붙는다.
@@ -68,7 +68,7 @@ SEAL은 `find_package(SEAL 4.3 REQUIRED)` + `target_link_libraries(seal_bench SE
 
 참고 — 아래 단일 명령으로도 빌드는 되지만, 저장소 관례에서 벗어나므로 검증용으로만 쓸 것:
 ```bash
-g++ -O2 -std=c++17 seal_bench.cpp \
+g++ -O2 -std=c++17 src/seal_bench.cpp \
   -I seal-install/include/SEAL-4.3 -L seal-install/lib -lseal-4.3 -o seal_bench
 ```
 
@@ -96,10 +96,10 @@ g++ -O2 -std=c++17 seal_bench.cpp \
 ## 3. 해야 할 일
 
 ### 3.1 하네스
-`seal_bench.cpp` 참조 구현이 함께 제공된다. 컴파일·실행 확인까지 끝난 상태다. 할 일:
+`src/seal_bench.cpp` 참조 구현이 함께 제공된다. 컴파일·실행 확인까지 끝난 상태다. 할 일:
 
 1. **CSV 스키마를 기존 파일에 맞출 것.** 참조 구현의 헤더는 임시다.
-   `results_openfhe_small_1t_dku16c.csv` 같은 기존 파일을 **먼저 읽어서** 컬럼명·순서·
+   `archive/v1/results/results_openfhe_small_1t_dku16c.csv` 같은 기존 파일을 **먼저 읽어서** 컬럼명·순서·
    단위를 그대로 복제할 것. 추측하지 말 것.
 2. 파일명 규칙 준수: `results_seal_{preset}_{1t|mt}_dku16c.csv` (§4).
 3. `aggregate.py`의 스키마 게이트와 접미사 가드에 `seal`을 허용 라이브러리로 추가.

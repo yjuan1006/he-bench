@@ -1,7 +1,7 @@
 # CLAUDE.md — HE Library Benchmark (OpenFHE vs Lattigo vs SEAL)
 
-> 이 문서는 **측정 API 사실** 전용이다. 파라미터 정본은 `PARAMS_dku16c.md`,
-> 정합 기준·측정 규칙은 `PROJECT_CONTEXT.md`, 실행/프로토콜은 `README.md`.
+> 이 문서는 **측정 API 사실** 전용이다. 파라미터 정본은 `docs/PARAMS_dku16c.md`,
+> 정합 기준·측정 규칙은 `docs/PROJECT_CONTEXT.md`, 실행/프로토콜은 `README.md`.
 
 ## 목적 (Goal)
 CKKS 연산의 **암호문 1개 기준** latency를 OpenFHE(C++) · Lattigo(Go) · SEAL(C++)에서 측정·비교한다.
@@ -20,9 +20,13 @@ CKKS 연산의 **암호문 1개 기준** latency를 OpenFHE(C++) · Lattigo(Go) 
 - 작업은 리눅스 홈 `~/he-bench`에서. `/mnt/c`(Windows FS)에서 빌드 금지(I/O 느림).
 - 파일 인코딩 UTF-8. 코드 주석 한국어 허용.
 
-## 디렉터리 (플랫 구조)
-he-bench/ 안에: CLAUDE.md, go.mod, lattigo_bench.go, openfhe_bench.cpp,
-CMakeLists.txt, aggregate.py, (+실행 산출) results_*.csv, plot_*.png
+## 디렉터리 (2026-08-01 개편 — 플랫 구조 폐지)
+- `src/` — lattigo_bench.go, openfhe_bench.cpp, seal_bench.cpp, *_precision.*, param_dump_*, calib.c
+- `scripts/` — run_*.sh, aggregate.py, crossing_points.py, probe_check.py, clock_verdict.py …
+- `docs/` — PARAMS_dku16c.md, PROJECT_CONTEXT.md, SETUP_DKU16C.md, SEAL_TASK.md, ENV_dku16c.txt
+- `archive/v1/` — 구 프리셋 측정 결과 (results/ CSV 25, plots/ PNG 24). **수정 금지**
+- 루트 — README.md, CLAUDE.md, CMakeLists.txt, go.mod/go.sum, calib, build_*/ , third_party/
+- 실행 산출: results_*.csv 는 루트, 집계 산출(plot_*.png / results_combined*.csv)은 plots/8op/
 
 ## 공통 측정 스펙 (두 구현이 반드시 동일하게)
 CSV 스키마(헤더 고정, **세 라이브러리 동일**):
@@ -122,7 +126,8 @@ OpenFHE EvalAdd/EvalMult는 새 Ciphertext 반환(functional) → 매 호출 할
 - 빌드/실행 에러는 추측 말고 실제 메시지 기준으로 수정.
 
 ## 완료 기준 (Definition of Done)
-1. go run lattigo_bench.go → results_lattigo.csv (레벨×op 전부, 30회 평균·표준편차)
-2. cmake . && make && ./openfhe_bench → results_openfhe.csv (동일 스키마)
-3. python3 aggregate.py → results_combined.csv + plot_*.png + 콘솔 요약표
+1. go run src/lattigo_bench.go → results_lattigo.csv (레벨×op 전부, 30회 평균·표준편차)
+2. cmake -S . -B build_openfhe && make -C build_openfhe && ./build_openfhe/openfhe_bench
+   → results_openfhe.csv (동일 스키마)
+3. python3 scripts/aggregate.py --suffix ... → plots/8op/results_combined*.csv + plot_*.png + 콘솔 요약표
 4. 세 라이브러리 값이 정성적으로 일관(relin/rotation ≫ mul ≫ add, 레벨 단조 감소)
