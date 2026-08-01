@@ -1,5 +1,6 @@
 # --- Python venv / 환경 ---
 venv/
+.venv/
 __pycache__/
 *.pyc
 
