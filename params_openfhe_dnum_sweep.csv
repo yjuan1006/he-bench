@@ -1,0 +1,238 @@
+logN,q0,delta,depth,dnum_req,ok,err,auxBits,ksTech,QCount,logQ,logQ_bits,dnum,perPart,maxDigitBits,PCount,logP,logP_bits,logQP,logQP_bits,bound_tc128,margin,digits
+14,60,40,5,1,1,,60,HYBRID,6,260,263,1,6,260,5,300,300,560,563,438,-122,L5=1;L4=1;L3=1;L2=1;L1=1
+14,60,40,5,2,1,,60,HYBRID,6,260,263,2,3,140,3,180,180,440,443,438,-2,L5=2;L4=2;L3=2;L2=1;L1=1
+14,60,40,5,3,1,,60,HYBRID,6,260,263,3,2,101,2,120,120,380,383,438,58,L5=3;L4=3;L3=2;L2=2;L1=1
+14,60,40,5,4,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 6 towers into 4 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+14,60,40,5,5,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 6 towers into 5 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+14,60,40,5,6,1,,60,HYBRID,6,260,263,6,1,60,1,60,60,320,323,438,118,L5=6;L4=5;L3=4;L2=3;L1=2
+14,60,40,6,1,1,,60,HYBRID,7,300,303,1,7,300,5,300,300,600,603,438,-162,L6=1;L5=1;L4=1;L3=1;L2=1;L1=1
+14,60,40,6,2,1,,60,HYBRID,7,300,303,2,4,180,3,180,180,480,483,438,-42,L6=2;L5=2;L4=2;L3=1;L2=1;L1=1
+14,60,40,6,3,1,,60,HYBRID,7,300,303,3,3,140,3,180,180,480,483,438,-42,L6=3;L5=2;L4=2;L3=2;L2=1;L1=1
+14,60,40,6,4,1,,60,HYBRID,7,300,303,4,2,100,2,120,120,420,423,438,18,L6=4;L5=3;L4=3;L3=2;L2=2;L1=1
+14,60,40,6,5,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 7 towers into 5 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+14,60,40,6,6,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 7 towers into 6 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+14,60,40,6,7,1,,60,HYBRID,7,300,303,7,1,60,1,60,60,360,363,438,78,L6=7;L5=6;L4=5;L3=4;L2=3;L1=2
+14,60,40,7,1,1,,60,HYBRID,8,340,344,1,8,340,6,360,360,700,704,438,-262,L7=1;L6=1;L5=1;L4=1;L3=1;L2=1;L1=1
+14,60,40,7,2,1,,60,HYBRID,8,340,344,2,4,181,4,240,240,580,584,438,-142,L7=2;L6=2;L5=2;L4=2;L3=1;L2=1;L1=1
+14,60,40,7,3,1,,60,HYBRID,8,340,344,3,3,140,3,180,180,520,524,438,-82,L7=3;L6=3;L5=2;L4=2;L3=2;L2=1;L1=1
+14,60,40,7,4,1,,60,HYBRID,8,340,344,4,2,101,2,120,120,460,464,438,-22,L7=4;L6=4;L5=3;L4=3;L3=2;L2=2;L1=1
+14,60,40,7,5,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 8 towers into 5 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+14,60,40,7,6,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 8 towers into 6 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+14,60,40,7,7,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 8 towers into 7 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+14,60,40,7,8,1,,60,HYBRID,8,340,344,8,1,60,1,60,60,400,404,438,38,L7=8;L6=7;L5=6;L4=5;L3=4;L2=3;L1=2
+14,60,45,5,1,1,,60,HYBRID,6,285,288,1,6,285,5,300,300,585,588,438,-147,L5=1;L4=1;L3=1;L2=1;L1=1
+14,60,45,5,2,1,,60,HYBRID,6,285,288,2,3,150,3,180,180,465,468,438,-27,L5=2;L4=2;L3=2;L2=1;L1=1
+14,60,45,5,3,1,,60,HYBRID,6,285,288,3,2,106,2,120,120,405,408,438,33,L5=3;L4=3;L3=2;L2=2;L1=1
+14,60,45,5,4,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 6 towers into 4 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+14,60,45,5,5,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 6 towers into 5 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+14,60,45,5,6,1,,60,HYBRID,6,285,288,6,1,60,1,60,60,345,348,438,93,L5=6;L4=5;L3=4;L2=3;L1=2
+14,60,45,6,1,1,,60,HYBRID,7,330,333,1,7,330,6,360,360,690,693,438,-252,L6=1;L5=1;L4=1;L3=1;L2=1;L1=1
+14,60,45,6,2,1,,60,HYBRID,7,330,333,2,4,195,4,240,240,570,573,438,-132,L6=2;L5=2;L4=2;L3=1;L2=1;L1=1
+14,60,45,6,3,1,,60,HYBRID,7,330,333,3,3,150,3,180,180,510,513,438,-72,L6=3;L5=2;L4=2;L3=2;L2=1;L1=1
+14,60,45,6,4,1,,60,HYBRID,7,330,333,4,2,105,2,120,120,450,453,438,-12,L6=4;L5=3;L4=3;L3=2;L2=2;L1=1
+14,60,45,6,5,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 7 towers into 5 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+14,60,45,6,6,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 7 towers into 6 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+14,60,45,6,7,1,,60,HYBRID,7,330,333,7,1,60,1,60,60,390,393,438,48,L6=7;L5=6;L4=5;L3=4;L2=3;L1=2
+14,60,45,7,1,1,,60,HYBRID,8,375,379,1,8,375,7,420,420,795,799,438,-357,L7=1;L6=1;L5=1;L4=1;L3=1;L2=1;L1=1
+14,60,45,7,2,1,,60,HYBRID,8,375,379,2,4,196,4,240,240,615,619,438,-177,L7=2;L6=2;L5=2;L4=2;L3=1;L2=1;L1=1
+14,60,45,7,3,1,,60,HYBRID,8,375,379,3,3,151,3,180,180,555,559,438,-117,L7=3;L6=3;L5=2;L4=2;L3=2;L2=1;L1=1
+14,60,45,7,4,1,,60,HYBRID,8,375,379,4,2,106,2,120,120,495,499,438,-57,L7=4;L6=4;L5=3;L4=3;L3=2;L2=2;L1=1
+14,60,45,7,5,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 8 towers into 5 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+14,60,45,7,6,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 8 towers into 6 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+14,60,45,7,7,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 8 towers into 7 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+14,60,45,7,8,1,,60,HYBRID,8,375,379,8,1,60,1,60,60,435,439,438,3,L7=8;L6=7;L5=6;L4=5;L3=4;L2=3;L1=2
+14,60,50,5,1,1,,60,HYBRID,6,310,313,1,6,311,6,360,360,670,673,438,-232,L5=1;L4=1;L3=1;L2=1;L1=1
+14,60,50,5,2,1,,60,HYBRID,6,310,313,2,3,160,3,180,180,490,493,438,-52,L5=2;L4=2;L3=2;L2=1;L1=1
+14,60,50,5,3,1,,60,HYBRID,6,310,313,3,2,111,2,120,120,430,433,438,8,L5=3;L4=3;L3=2;L2=2;L1=1
+14,60,50,5,4,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 6 towers into 4 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+14,60,50,5,5,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 6 towers into 5 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+14,60,50,5,6,1,,60,HYBRID,6,310,313,6,1,60,1,60,60,370,373,438,68,L5=6;L4=5;L3=4;L2=3;L1=2
+14,60,50,6,1,1,,60,HYBRID,7,360,363,1,7,360,6,360,360,720,723,438,-282,L6=1;L5=1;L4=1;L3=1;L2=1;L1=1
+14,60,50,6,2,1,,60,HYBRID,7,360,363,2,4,210,4,240,240,600,603,438,-162,L6=2;L5=2;L4=2;L3=1;L2=1;L1=1
+14,60,50,6,3,1,,60,HYBRID,7,360,363,3,3,160,3,180,180,540,543,438,-102,L6=3;L5=2;L4=2;L3=2;L2=1;L1=1
+14,60,50,6,4,1,,60,HYBRID,7,360,363,4,2,110,2,120,120,480,483,438,-42,L6=4;L5=3;L4=3;L3=2;L2=2;L1=1
+14,60,50,6,5,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 7 towers into 5 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+14,60,50,6,6,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 7 towers into 6 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+14,60,50,6,7,1,,60,HYBRID,7,360,363,7,1,60,1,60,60,420,423,438,18,L6=7;L5=6;L4=5;L3=4;L2=3;L1=2
+14,60,50,7,1,1,,60,HYBRID,8,410,414,1,8,410,7,420,420,830,834,438,-392,L7=1;L6=1;L5=1;L4=1;L3=1;L2=1;L1=1
+14,60,50,7,2,1,,60,HYBRID,8,410,414,2,4,211,4,240,240,650,654,438,-212,L7=2;L6=2;L5=2;L4=2;L3=1;L2=1;L1=1
+14,60,50,7,3,1,,60,HYBRID,8,410,414,3,3,160,3,180,180,590,594,438,-152,L7=3;L6=3;L5=2;L4=2;L3=2;L2=1;L1=1
+14,60,50,7,4,1,,60,HYBRID,8,410,414,4,2,111,2,120,120,530,534,438,-92,L7=4;L6=4;L5=3;L4=3;L3=2;L2=2;L1=1
+14,60,50,7,5,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 8 towers into 5 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+14,60,50,7,6,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 8 towers into 6 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+14,60,50,7,7,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 8 towers into 7 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+14,60,50,7,8,1,,60,HYBRID,8,410,414,8,1,60,1,60,60,470,474,438,-32,L7=8;L6=7;L5=6;L4=5;L3=4;L2=3;L1=2
+15,60,40,12,1,1,,60,HYBRID,13,540,546,1,13,540,9,540,540,1080,1086,881,-199,L12=1;L11=1;L10=1;L9=1;L8=1;L7=1;L6=1;L5=1;L4=1;L3=1;L2=1;L1=1
+15,60,40,12,2,1,,60,HYBRID,13,540,546,2,7,300,5,300,300,840,846,881,41,L12=2;L11=2;L10=2;L9=2;L8=2;L7=2;L6=1;L5=1;L4=1;L3=1;L2=1;L1=1
+15,60,40,12,3,1,,60,HYBRID,13,540,546,3,5,220,4,240,240,780,786,881,101,L12=3;L11=3;L10=3;L9=2;L8=2;L7=2;L6=2;L5=2;L4=1;L3=1;L2=1;L1=1
+15,60,40,12,4,1,,60,HYBRID,13,540,546,4,4,180,3,180,180,720,726,881,161,L12=4;L11=3;L10=3;L9=3;L8=3;L7=2;L6=2;L5=2;L4=2;L3=1;L2=1;L1=1
+15,60,40,12,5,1,,60,HYBRID,13,540,546,5,3,140,3,180,180,720,726,881,161,L12=5;L11=4;L10=4;L9=4;L8=3;L7=3;L6=3;L5=2;L4=2;L3=2;L2=1;L1=1
+15,60,40,12,6,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 13 towers into 6 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,40,12,7,1,,60,HYBRID,13,540,546,7,2,100,2,120,120,660,666,881,221,L12=7;L11=6;L10=6;L9=5;L8=5;L7=4;L6=4;L5=3;L4=3;L3=2;L2=2;L1=1
+15,60,40,12,8,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 13 towers into 8 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,40,12,9,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 13 towers into 9 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,40,12,10,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 13 towers into 10 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,40,12,11,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 13 towers into 11 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,40,12,12,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 13 towers into 12 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,40,12,13,1,,60,HYBRID,13,540,546,13,1,60,1,60,60,600,606,881,281,L12=13;L11=12;L10=11;L9=10;L8=9;L7=8;L6=7;L5=6;L4=5;L3=4;L2=3;L1=2
+15,60,40,13,1,1,,60,HYBRID,14,580,587,1,14,580,10,600,600,1180,1187,881,-299,L13=1;L12=1;L11=1;L10=1;L9=1;L8=1;L7=1;L6=1;L5=1;L4=1;L3=1;L2=1;L1=1
+15,60,40,13,2,1,,60,HYBRID,14,580,587,2,7,300,5,300,300,880,887,881,1,L13=2;L12=2;L11=2;L10=2;L9=2;L8=2;L7=2;L6=1;L5=1;L4=1;L3=1;L2=1;L1=1
+15,60,40,13,3,1,,60,HYBRID,14,580,587,3,5,220,4,240,240,820,827,881,61,L13=3;L12=3;L11=3;L10=3;L9=2;L8=2;L7=2;L6=2;L5=2;L4=1;L3=1;L2=1;L1=1
+15,60,40,13,4,1,,60,HYBRID,14,580,587,4,4,181,4,240,240,820,827,881,61,L13=4;L12=4;L11=3;L10=3;L9=3;L8=3;L7=2;L6=2;L5=2;L4=2;L3=1;L2=1;L1=1
+15,60,40,13,5,1,,60,HYBRID,14,580,587,5,3,140,3,180,180,760,767,881,121,L13=5;L12=5;L11=4;L10=4;L9=4;L8=3;L7=3;L6=3;L5=2;L4=2;L3=2;L2=1;L1=1
+15,60,40,13,6,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 14 towers into 6 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,40,13,7,1,,60,HYBRID,14,580,587,7,2,101,2,120,120,700,707,881,181,L13=7;L12=7;L11=6;L10=6;L9=5;L8=5;L7=4;L6=4;L5=3;L4=3;L3=2;L2=2;L1=1
+15,60,40,13,8,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 14 towers into 8 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,40,13,9,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 14 towers into 9 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,40,13,10,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 14 towers into 10 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,40,13,11,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 14 towers into 11 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,40,13,12,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 14 towers into 12 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,40,13,13,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 14 towers into 13 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,40,13,14,1,,60,HYBRID,14,580,587,14,1,60,1,60,60,640,647,881,241,L13=14;L12=13;L11=12;L10=11;L9=10;L8=9;L7=8;L6=7;L5=6;L4=5;L3=4;L2=3;L1=2
+15,60,40,14,1,1,,60,HYBRID,15,620,627,1,15,620,11,660,660,1280,1287,881,-399,L14=1;L13=1;L12=1;L11=1;L10=1;L9=1;L8=1;L7=1;L6=1;L5=1;L4=1;L3=1;L2=1;L1=1
+15,60,40,14,2,1,,60,HYBRID,15,620,627,2,8,340,6,360,360,980,987,881,-99,L14=2;L13=2;L12=2;L11=2;L10=2;L9=2;L8=2;L7=1;L6=1;L5=1;L4=1;L3=1;L2=1;L1=1
+15,60,40,14,3,1,,60,HYBRID,15,620,627,3,5,220,4,240,240,860,867,881,21,L14=3;L13=3;L12=3;L11=3;L10=3;L9=2;L8=2;L7=2;L6=2;L5=2;L4=1;L3=1;L2=1;L1=1
+15,60,40,14,4,1,,60,HYBRID,15,620,627,4,4,180,3,180,180,800,807,881,81,L14=4;L13=4;L12=4;L11=3;L10=3;L9=3;L8=3;L7=2;L6=2;L5=2;L4=2;L3=1;L2=1;L1=1
+15,60,40,14,5,1,,60,HYBRID,15,620,627,5,3,140,3,180,180,800,807,881,81,L14=5;L13=5;L12=5;L11=4;L10=4;L9=4;L8=3;L7=3;L6=3;L5=2;L4=2;L3=2;L2=1;L1=1
+15,60,40,14,6,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 15 towers into 6 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,40,14,7,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 15 towers into 7 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,40,14,8,1,,60,HYBRID,15,620,627,8,2,100,2,120,120,740,747,881,141,L14=8;L13=7;L12=7;L11=6;L10=6;L9=5;L8=5;L7=4;L6=4;L5=3;L4=3;L3=2;L2=2;L1=1
+15,60,40,14,9,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 15 towers into 9 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,40,14,10,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 15 towers into 10 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,40,14,11,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 15 towers into 11 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,40,14,12,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 15 towers into 12 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,40,14,13,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 15 towers into 13 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,40,14,14,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 15 towers into 14 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,40,14,15,1,,60,HYBRID,15,620,627,15,1,60,1,60,60,680,687,881,201,L14=15;L13=14;L12=13;L11=12;L10=11;L9=10;L8=9;L7=8;L6=7;L5=6;L4=5;L3=4;L2=3;L1=2
+15,60,40,15,1,1,,60,HYBRID,16,660,668,1,16,660,11,660,660,1320,1328,881,-439,L15=1;L14=1;L13=1;L12=1;L11=1;L10=1;L9=1;L8=1;L7=1;L6=1;L5=1;L4=1;L3=1;L2=1;L1=1
+15,60,40,15,2,1,,60,HYBRID,16,660,668,2,8,341,6,360,360,1020,1028,881,-139,L15=2;L14=2;L13=2;L12=2;L11=2;L10=2;L9=2;L8=2;L7=1;L6=1;L5=1;L4=1;L3=1;L2=1;L1=1
+15,60,40,15,3,1,,60,HYBRID,16,660,668,3,6,261,5,300,300,960,968,881,-79,L15=3;L14=3;L13=3;L12=3;L11=2;L10=2;L9=2;L8=2;L7=2;L6=2;L5=1;L4=1;L3=1;L2=1;L1=1
+15,60,40,15,4,1,,60,HYBRID,16,660,668,4,4,181,4,240,240,900,908,881,-19,L15=4;L14=4;L13=4;L12=4;L11=3;L10=3;L9=3;L8=3;L7=2;L6=2;L5=2;L4=2;L3=1;L2=1;L1=1
+15,60,40,15,5,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 16 towers into 5 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,40,15,6,1,,60,HYBRID,16,660,668,6,3,141,3,180,180,840,848,881,41,L15=6;L14=5;L13=5;L12=5;L11=4;L10=4;L9=4;L8=3;L7=3;L6=3;L5=2;L4=2;L3=2;L2=1;L1=1
+15,60,40,15,7,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 16 towers into 7 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,40,15,8,1,,60,HYBRID,16,660,668,8,2,101,2,120,120,780,788,881,101,L15=8;L14=8;L13=7;L12=7;L11=6;L10=6;L9=5;L8=5;L7=4;L6=4;L5=3;L4=3;L3=2;L2=2;L1=1
+15,60,40,15,9,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 16 towers into 9 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,40,15,10,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 16 towers into 10 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,40,15,11,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 16 towers into 11 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,40,15,12,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 16 towers into 12 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,40,15,13,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 16 towers into 13 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,40,15,14,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 16 towers into 14 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,40,15,15,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 16 towers into 15 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,40,15,16,1,,60,HYBRID,16,660,668,16,1,60,1,60,60,720,728,881,161,L15=16;L14=15;L13=14;L12=13;L11=12;L10=11;L9=10;L8=9;L7=8;L6=7;L5=6;L4=5;L3=4;L2=3;L1=2
+15,60,45,12,1,1,,60,HYBRID,13,600,606,1,13,600,10,600,600,1200,1206,881,-319,L12=1;L11=1;L10=1;L9=1;L8=1;L7=1;L6=1;L5=1;L4=1;L3=1;L2=1;L1=1
+15,60,45,12,2,1,,60,HYBRID,13,600,606,2,7,330,6,360,360,960,966,881,-79,L12=2;L11=2;L10=2;L9=2;L8=2;L7=2;L6=1;L5=1;L4=1;L3=1;L2=1;L1=1
+15,60,45,12,3,1,,60,HYBRID,13,600,606,3,5,240,4,240,240,840,846,881,41,L12=3;L11=3;L10=3;L9=2;L8=2;L7=2;L6=2;L5=2;L4=1;L3=1;L2=1;L1=1
+15,60,45,12,4,1,,60,HYBRID,13,600,606,4,4,195,4,240,240,840,846,881,41,L12=4;L11=3;L10=3;L9=3;L8=3;L7=2;L6=2;L5=2;L4=2;L3=1;L2=1;L1=1
+15,60,45,12,5,1,,60,HYBRID,13,600,606,5,3,150,3,180,180,780,786,881,101,L12=5;L11=4;L10=4;L9=4;L8=3;L7=3;L6=3;L5=2;L4=2;L3=2;L2=1;L1=1
+15,60,45,12,6,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 13 towers into 6 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,45,12,7,1,,60,HYBRID,13,600,606,7,2,105,2,120,120,720,726,881,161,L12=7;L11=6;L10=6;L9=5;L8=5;L7=4;L6=4;L5=3;L4=3;L3=2;L2=2;L1=1
+15,60,45,12,8,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 13 towers into 8 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,45,12,9,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 13 towers into 9 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,45,12,10,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 13 towers into 10 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,45,12,11,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 13 towers into 11 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,45,12,12,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 13 towers into 12 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,45,12,13,1,,60,HYBRID,13,600,606,13,1,60,1,60,60,660,666,881,221,L12=13;L11=12;L10=11;L9=10;L8=9;L7=8;L6=7;L5=6;L4=5;L3=4;L2=3;L1=2
+15,60,45,13,1,1,,60,HYBRID,14,645,652,1,14,645,11,660,660,1305,1312,881,-424,L13=1;L12=1;L11=1;L10=1;L9=1;L8=1;L7=1;L6=1;L5=1;L4=1;L3=1;L2=1;L1=1
+15,60,45,13,2,1,,60,HYBRID,14,645,652,2,7,330,6,360,360,1005,1012,881,-124,L13=2;L12=2;L11=2;L10=2;L9=2;L8=2;L7=2;L6=1;L5=1;L4=1;L3=1;L2=1;L1=1
+15,60,45,13,3,1,,60,HYBRID,14,645,652,3,5,240,4,240,240,885,892,881,-4,L13=3;L12=3;L11=3;L10=3;L9=2;L8=2;L7=2;L6=2;L5=2;L4=1;L3=1;L2=1;L1=1
+15,60,45,13,4,1,,60,HYBRID,14,645,652,4,4,196,4,240,240,885,892,881,-4,L13=4;L12=4;L11=3;L10=3;L9=3;L8=3;L7=2;L6=2;L5=2;L4=2;L3=1;L2=1;L1=1
+15,60,45,13,5,1,,60,HYBRID,14,645,652,5,3,150,3,180,180,825,832,881,56,L13=5;L12=5;L11=4;L10=4;L9=4;L8=3;L7=3;L6=3;L5=2;L4=2;L3=2;L2=1;L1=1
+15,60,45,13,6,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 14 towers into 6 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,45,13,7,1,,60,HYBRID,14,645,652,7,2,106,2,120,120,765,772,881,116,L13=7;L12=7;L11=6;L10=6;L9=5;L8=5;L7=4;L6=4;L5=3;L4=3;L3=2;L2=2;L1=1
+15,60,45,13,8,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 14 towers into 8 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,45,13,9,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 14 towers into 9 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,45,13,10,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 14 towers into 10 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,45,13,11,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 14 towers into 11 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,45,13,12,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 14 towers into 12 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,45,13,13,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 14 towers into 13 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,45,13,14,1,,60,HYBRID,14,645,652,14,1,60,1,60,60,705,712,881,176,L13=14;L12=13;L11=12;L10=11;L9=10;L8=9;L7=8;L6=7;L5=6;L4=5;L3=4;L2=3;L1=2
+15,60,45,14,1,1,,60,HYBRID,15,690,697,1,15,690,12,720,720,1410,1417,881,-529,L14=1;L13=1;L12=1;L11=1;L10=1;L9=1;L8=1;L7=1;L6=1;L5=1;L4=1;L3=1;L2=1;L1=1
+15,60,45,14,2,1,,60,HYBRID,15,690,697,2,8,375,7,420,420,1110,1117,881,-229,L14=2;L13=2;L12=2;L11=2;L10=2;L9=2;L8=2;L7=1;L6=1;L5=1;L4=1;L3=1;L2=1;L1=1
+15,60,45,14,3,1,,60,HYBRID,15,690,697,3,5,240,4,240,240,930,937,881,-49,L14=3;L13=3;L12=3;L11=3;L10=3;L9=2;L8=2;L7=2;L6=2;L5=2;L4=1;L3=1;L2=1;L1=1
+15,60,45,14,4,1,,60,HYBRID,15,690,697,4,4,195,4,240,240,930,937,881,-49,L14=4;L13=4;L12=4;L11=3;L10=3;L9=3;L8=3;L7=2;L6=2;L5=2;L4=2;L3=1;L2=1;L1=1
+15,60,45,14,5,1,,60,HYBRID,15,690,697,5,3,150,3,180,180,870,877,881,11,L14=5;L13=5;L12=5;L11=4;L10=4;L9=4;L8=3;L7=3;L6=3;L5=2;L4=2;L3=2;L2=1;L1=1
+15,60,45,14,6,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 15 towers into 6 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,45,14,7,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 15 towers into 7 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,45,14,8,1,,60,HYBRID,15,690,697,8,2,105,2,120,120,810,817,881,71,L14=8;L13=7;L12=7;L11=6;L10=6;L9=5;L8=5;L7=4;L6=4;L5=3;L4=3;L3=2;L2=2;L1=1
+15,60,45,14,9,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 15 towers into 9 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,45,14,10,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 15 towers into 10 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,45,14,11,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 15 towers into 11 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,45,14,12,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 15 towers into 12 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,45,14,13,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 15 towers into 13 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,45,14,14,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 15 towers into 14 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,45,14,15,1,,60,HYBRID,15,690,697,15,1,60,1,60,60,750,757,881,131,L14=15;L13=14;L12=13;L11=12;L10=11;L9=10;L8=9;L7=8;L6=7;L5=6;L4=5;L3=4;L2=3;L1=2
+15,60,45,15,1,1,,60,HYBRID,16,735,743,1,16,735,13,780,780,1515,1523,881,-634,L15=1;L14=1;L13=1;L12=1;L11=1;L10=1;L9=1;L8=1;L7=1;L6=1;L5=1;L4=1;L3=1;L2=1;L1=1
+15,60,45,15,2,1,,60,HYBRID,16,735,743,2,8,376,7,420,420,1155,1163,881,-274,L15=2;L14=2;L13=2;L12=2;L11=2;L10=2;L9=2;L8=2;L7=1;L6=1;L5=1;L4=1;L3=1;L2=1;L1=1
+15,60,45,15,3,1,,60,HYBRID,16,735,743,3,6,286,5,300,300,1035,1043,881,-154,L15=3;L14=3;L13=3;L12=3;L11=2;L10=2;L9=2;L8=2;L7=2;L6=2;L5=1;L4=1;L3=1;L2=1;L1=1
+15,60,45,15,4,1,,60,HYBRID,16,735,743,4,4,196,4,240,240,975,983,881,-94,L15=4;L14=4;L13=4;L12=4;L11=3;L10=3;L9=3;L8=3;L7=2;L6=2;L5=2;L4=2;L3=1;L2=1;L1=1
+15,60,45,15,5,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 16 towers into 5 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,45,15,6,1,,60,HYBRID,16,735,743,6,3,150,3,180,180,915,923,881,-34,L15=6;L14=5;L13=5;L12=5;L11=4;L10=4;L9=4;L8=3;L7=3;L6=3;L5=2;L4=2;L3=2;L2=1;L1=1
+15,60,45,15,7,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 16 towers into 7 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,45,15,8,1,,60,HYBRID,16,735,743,8,2,106,2,120,120,855,863,881,26,L15=8;L14=8;L13=7;L12=7;L11=6;L10=6;L9=5;L8=5;L7=4;L6=4;L5=3;L4=3;L3=2;L2=2;L1=1
+15,60,45,15,9,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 16 towers into 9 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,45,15,10,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 16 towers into 10 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,45,15,11,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 16 towers into 11 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,45,15,12,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 16 towers into 12 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,45,15,13,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 16 towers into 13 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,45,15,14,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 16 towers into 14 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,45,15,15,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 16 towers into 15 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,45,15,16,1,,60,HYBRID,16,735,743,16,1,60,1,60,60,795,803,881,86,L15=16;L14=15;L13=14;L12=13;L11=12;L10=11;L9=10;L8=9;L7=8;L6=7;L5=6;L4=5;L3=4;L2=3;L1=2
+15,60,50,12,1,1,,60,HYBRID,13,660,666,1,13,660,11,660,660,1320,1326,881,-439,L12=1;L11=1;L10=1;L9=1;L8=1;L7=1;L6=1;L5=1;L4=1;L3=1;L2=1;L1=1
+15,60,50,12,2,1,,60,HYBRID,13,660,666,2,7,360,6,360,360,1020,1026,881,-139,L12=2;L11=2;L10=2;L9=2;L8=2;L7=2;L6=1;L5=1;L4=1;L3=1;L2=1;L1=1
+15,60,50,12,3,1,,60,HYBRID,13,660,666,3,5,260,5,300,300,960,966,881,-79,L12=3;L11=3;L10=3;L9=2;L8=2;L7=2;L6=2;L5=2;L4=1;L3=1;L2=1;L1=1
+15,60,50,12,4,1,,60,HYBRID,13,660,666,4,4,210,4,240,240,900,906,881,-19,L12=4;L11=3;L10=3;L9=3;L8=3;L7=2;L6=2;L5=2;L4=2;L3=1;L2=1;L1=1
+15,60,50,12,5,1,,60,HYBRID,13,660,666,5,3,160,3,180,180,840,846,881,41,L12=5;L11=4;L10=4;L9=4;L8=3;L7=3;L6=3;L5=2;L4=2;L3=2;L2=1;L1=1
+15,60,50,12,6,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 13 towers into 6 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,50,12,7,1,,60,HYBRID,13,660,666,7,2,110,2,120,120,780,786,881,101,L12=7;L11=6;L10=6;L9=5;L8=5;L7=4;L6=4;L5=3;L4=3;L3=2;L2=2;L1=1
+15,60,50,12,8,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 13 towers into 8 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,50,12,9,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 13 towers into 9 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,50,12,10,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 13 towers into 10 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,50,12,11,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 13 towers into 11 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,50,12,12,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 13 towers into 12 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,50,12,13,1,,60,HYBRID,13,660,666,13,1,60,1,60,60,720,726,881,161,L12=13;L11=12;L10=11;L9=10;L8=9;L7=8;L6=7;L5=6;L4=5;L3=4;L2=3;L1=2
+15,60,50,13,1,1,,60,HYBRID,14,710,717,1,14,711,12,720,720,1430,1437,881,-549,L13=1;L12=1;L11=1;L10=1;L9=1;L8=1;L7=1;L6=1;L5=1;L4=1;L3=1;L2=1;L1=1
+15,60,50,13,2,1,,60,HYBRID,14,710,717,2,7,361,7,420,420,1130,1137,881,-249,L13=2;L12=2;L11=2;L10=2;L9=2;L8=2;L7=2;L6=1;L5=1;L4=1;L3=1;L2=1;L1=1
+15,60,50,13,3,1,,60,HYBRID,14,710,717,3,5,261,5,300,300,1010,1017,881,-129,L13=3;L12=3;L11=3;L10=3;L9=2;L8=2;L7=2;L6=2;L5=2;L4=1;L3=1;L2=1;L1=1
+15,60,50,13,4,1,,60,HYBRID,14,710,717,4,4,211,4,240,240,950,957,881,-69,L13=4;L12=4;L11=3;L10=3;L9=3;L8=3;L7=2;L6=2;L5=2;L4=2;L3=1;L2=1;L1=1
+15,60,50,13,5,1,,60,HYBRID,14,710,717,5,3,161,3,180,180,890,897,881,-9,L13=5;L12=5;L11=4;L10=4;L9=4;L8=3;L7=3;L6=3;L5=2;L4=2;L3=2;L2=1;L1=1
+15,60,50,13,6,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 14 towers into 6 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,50,13,7,1,,60,HYBRID,14,710,717,7,2,111,2,120,120,830,837,881,51,L13=7;L12=7;L11=6;L10=6;L9=5;L8=5;L7=4;L6=4;L5=3;L4=3;L3=2;L2=2;L1=1
+15,60,50,13,8,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 14 towers into 8 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,50,13,9,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 14 towers into 9 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,50,13,10,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 14 towers into 10 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,50,13,11,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 14 towers into 11 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,50,13,12,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 14 towers into 12 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,50,13,13,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 14 towers into 13 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,50,13,14,1,,60,HYBRID,14,710,717,14,1,60,1,60,60,770,777,881,111,L13=14;L12=13;L11=12;L10=11;L9=10;L8=9;L7=8;L6=7;L5=6;L4=5;L3=4;L2=3;L1=2
+15,60,50,14,1,1,,60,HYBRID,15,760,767,1,15,760,13,780,780,1540,1547,881,-659,L14=1;L13=1;L12=1;L11=1;L10=1;L9=1;L8=1;L7=1;L6=1;L5=1;L4=1;L3=1;L2=1;L1=1
+15,60,50,14,2,1,,60,HYBRID,15,760,767,2,8,410,7,420,420,1180,1187,881,-299,L14=2;L13=2;L12=2;L11=2;L10=2;L9=2;L8=2;L7=1;L6=1;L5=1;L4=1;L3=1;L2=1;L1=1
+15,60,50,14,3,1,,60,HYBRID,15,760,767,3,5,260,5,300,300,1060,1067,881,-179,L14=3;L13=3;L12=3;L11=3;L10=3;L9=2;L8=2;L7=2;L6=2;L5=2;L4=1;L3=1;L2=1;L1=1
+15,60,50,14,4,1,,60,HYBRID,15,760,767,4,4,210,4,240,240,1000,1007,881,-119,L14=4;L13=4;L12=4;L11=3;L10=3;L9=3;L8=3;L7=2;L6=2;L5=2;L4=2;L3=1;L2=1;L1=1
+15,60,50,14,5,1,,60,HYBRID,15,760,767,5,3,160,3,180,180,940,947,881,-59,L14=5;L13=5;L12=5;L11=4;L10=4;L9=4;L8=3;L7=3;L6=3;L5=2;L4=2;L3=2;L2=1;L1=1
+15,60,50,14,6,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 15 towers into 6 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,50,14,7,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 15 towers into 7 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,50,14,8,1,,60,HYBRID,15,760,767,8,2,110,2,120,120,880,887,881,1,L14=8;L13=7;L12=7;L11=6;L10=6;L9=5;L8=5;L7=4;L6=4;L5=3;L4=3;L3=2;L2=2;L1=1
+15,60,50,14,9,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 15 towers into 9 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,50,14,10,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 15 towers into 10 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,50,14,11,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 15 towers into 11 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,50,14,12,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 15 towers into 12 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,50,14,13,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 15 towers into 13 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,50,14,14,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 15 towers into 14 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,50,14,15,1,,60,HYBRID,15,760,767,15,1,60,1,60,60,820,827,881,61,L14=15;L13=14;L12=13;L11=12;L10=11;L9=10;L8=9;L7=8;L6=7;L5=6;L4=5;L3=4;L2=3;L1=2
+15,60,50,15,1,1,,60,HYBRID,16,810,818,1,16,811,14,840,840,1650,1658,881,-769,L15=1;L14=1;L13=1;L12=1;L11=1;L10=1;L9=1;L8=1;L7=1;L6=1;L5=1;L4=1;L3=1;L2=1;L1=1
+15,60,50,15,2,1,,60,HYBRID,16,810,818,2,8,411,7,420,420,1230,1238,881,-349,L15=2;L14=2;L13=2;L12=2;L11=2;L10=2;L9=2;L8=2;L7=1;L6=1;L5=1;L4=1;L3=1;L2=1;L1=1
+15,60,50,15,3,1,,60,HYBRID,16,810,818,3,6,311,6,360,360,1170,1178,881,-289,L15=3;L14=3;L13=3;L12=3;L11=2;L10=2;L9=2;L8=2;L7=2;L6=2;L5=1;L4=1;L3=1;L2=1;L1=1
+15,60,50,15,4,1,,60,HYBRID,16,810,818,4,4,211,4,240,240,1050,1058,881,-169,L15=4;L14=4;L13=4;L12=4;L11=3;L10=3;L9=3;L8=3;L7=2;L6=2;L5=2;L4=2;L3=1;L2=1;L1=1
+15,60,50,15,5,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 16 towers into 5 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,50,15,6,1,,60,HYBRID,16,810,818,6,3,160,3,180,180,990,998,881,-109,L15=6;L14=5;L13=5;L12=5;L11=4;L10=4;L9=4;L8=3;L7=3;L6=3;L5=2;L4=2;L3=2;L2=1;L1=1
+15,60,50,15,7,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 16 towers into 7 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,50,15,8,1,,60,HYBRID,16,810,818,8,2,111,2,120,120,930,938,881,-49,L15=8;L14=8;L13=7;L12=7;L11=6;L10=6;L9=5;L8=5;L7=4;L6=4;L5=3;L4=3;L3=2;L2=2;L1=1
+15,60,50,15,9,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 16 towers into 9 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,50,15,10,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 16 towers into 10 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,50,15,11,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 16 towers into 11 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,50,15,12,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 16 towers into 12 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,50,15,13,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 16 towers into 13 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,50,15,14,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 16 towers into 14 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,50,15,15,0,/data/yja/openfhe-src/src/pke/lib/schemerns/rns-cryptoparameters.cpp:l.91:PrecomputeCRTTables(): HYBRID key switching parameters: Can't appropriately distribute 16 towers into 15 digits. Please select different number of digits.,,,,,,,,,,,,,,,
+15,60,50,15,16,1,,60,HYBRID,16,810,818,16,1,60,1,60,60,870,878,881,11,L15=16;L14=15;L13=14;L12=13;L11=12;L10=11;L9=10;L8=9;L7=8;L6=7;L5=6;L4=5;L3=4;L2=3;L1=2

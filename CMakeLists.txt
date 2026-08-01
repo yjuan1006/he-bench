@@ -45,6 +45,24 @@ if(BENCH_OPENFHE)
         target_link_options(openfhe_bench PRIVATE -Wl,--no-as-needed)
     endif()
     target_link_libraries(openfhe_bench ${OpenFHE_SHARED_LIBRARIES})
+
+    # 진단 전용 파라미터 덤프. 벤치와 같은 include/link 설정을 그대로 물려준다.
+    # (예전에는 수동 g++로 빌드해 루트에 바이너리만 남아 있었다.)
+    add_executable(param_dump_openfhe src/param_dump_openfhe.cpp)
+    target_compile_options(param_dump_openfhe PRIVATE ${OPENFHE_BENCH_CXX_FLAGS_LIST})
+    target_include_directories(param_dump_openfhe PRIVATE
+        ${OPENMP_INCLUDES}
+        ${OpenFHE_INCLUDE}
+        ${OpenFHE_INCLUDE}/third-party/include
+        ${OpenFHE_INCLUDE}/core
+        ${OpenFHE_INCLUDE}/pke
+        ${OpenFHE_INCLUDE}/binfhe)
+    target_link_directories(param_dump_openfhe PRIVATE ${OpenFHE_LIBDIR} ${OPENMP_LIBRARIES})
+    target_link_options(param_dump_openfhe PRIVATE ${OPENFHE_BENCH_CXX_FLAGS_LIST})
+    if(UNIX AND NOT APPLE)
+        target_link_options(param_dump_openfhe PRIVATE -Wl,--no-as-needed)
+    endif()
+    target_link_libraries(param_dump_openfhe ${OpenFHE_SHARED_LIBRARIES})
 endif()
 
 # --------------------------------------------------------------------------
