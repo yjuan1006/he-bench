@@ -63,6 +63,24 @@ if(BENCH_OPENFHE)
         target_link_options(param_dump_openfhe PRIVATE -Wl,--no-as-needed)
     endif()
     target_link_libraries(param_dump_openfhe ${OpenFHE_SHARED_LIBRARIES})
+
+    # 새 프리셋 후보 key-switch 정밀도 사전 측정 (비밀키 암호화 · rot1 경로).
+    add_executable(ksprec_openfhe src/ksprec_openfhe.cpp)
+    target_compile_options(ksprec_openfhe PRIVATE ${OPENFHE_BENCH_CXX_FLAGS_LIST})
+    target_include_directories(ksprec_openfhe PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${OPENMP_INCLUDES}
+        ${OpenFHE_INCLUDE}
+        ${OpenFHE_INCLUDE}/third-party/include
+        ${OpenFHE_INCLUDE}/core
+        ${OpenFHE_INCLUDE}/pke
+        ${OpenFHE_INCLUDE}/binfhe)
+    target_link_directories(ksprec_openfhe PRIVATE ${OpenFHE_LIBDIR} ${OPENMP_LIBRARIES})
+    target_link_options(ksprec_openfhe PRIVATE ${OPENFHE_BENCH_CXX_FLAGS_LIST})
+    if(UNIX AND NOT APPLE)
+        target_link_options(ksprec_openfhe PRIVATE -Wl,--no-as-needed)
+    endif()
+    target_link_libraries(ksprec_openfhe ${OpenFHE_SHARED_LIBRARIES})
 endif()
 
 # --------------------------------------------------------------------------
@@ -98,4 +116,10 @@ if(BENCH_SEAL)
     add_executable(seal_precision src/seal_precision.cpp)
     target_compile_options(seal_precision PRIVATE -Wall -O3)
     target_link_libraries(seal_precision ${SEAL_TARGET})
+
+    # 새 프리셋 후보 비교 참조 (비밀키 암호화 · rot1 경로).
+    add_executable(ksprec_seal src/ksprec_seal.cpp)
+    target_compile_options(ksprec_seal PRIVATE -Wall -O3)
+    target_include_directories(ksprec_seal PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+    target_link_libraries(ksprec_seal ${SEAL_TARGET})
 endif()

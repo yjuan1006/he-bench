@@ -21,6 +21,8 @@ seal_bench
 seal_precision
 openfhe_precision
 param_dump_openfhe
+ksprec_openfhe
+ksprec_seal
 seal_probe
 seal_align
 *.o
