@@ -98,8 +98,18 @@ python3 scripts/probe_check.py traces/of   # 측정 전/후 클럭이 fast 밴�
 ## op 목록
 
 `add_cc`(ct+ct), `add_cp`(ct+pt), `mul_cp`(ct×pt), `mul_cc`(ct×ct relin 없음, degree-2),
-`mul_cc_rlk`(ct×ct relin 포함), `relin`(= mul_cc_rlk − mul_cc, 음수 0 clamp),
+`mul_cc_rlk`(ct×ct relin 포함), `relin`(재선형화 단독 — **직접 계측**),
 `rescale`(모듈러스 1개 drop), `rot1`(+1 슬롯 회전).
+
+`relin`은 size-3(degree-2) 암호문을 타이머 밖에서 1회 만들어 두고 out-of-place
+relinearize를 반복 측정한다 — 세 라이브러리 모두 같은 방식이다.
+
+> **2026-07-26 변경.** 그 전에는 `relin = mul_cc_rlk − mul_cc`(음수 0 clamp) 파생값이었고
+> OpenFHE·Lattigo만 그랬다(SEAL은 처음부터 직접 계측). 파생 방식은 두 가지가 문제였다 —
+> ⑴ `EvalMult`가 곱셈+relin을 실제로 융합하는 OpenFHE에서 relin을 **4.4% 과소평가**했고
+> (같은 실행에서 직접/파생 = OpenFHE **1.044**, Lattigo 1.001, SEAL 1.006),
+> ⑵ 두 평균의 차라서 분산이 없어 **전 행 `std_us=0`** 이었다.
+> 근거와 상세는 `docs/PARAMS_dku16c.md §6`. `archive/v1/` 의 CSV는 전환 후 재측정본이다.
 
 ## 측정 프로토콜 (dku16c 필수)
 
