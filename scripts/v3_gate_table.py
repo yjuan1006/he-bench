@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""v3n15d42L12 본측정 physics_gate + 표 + 분석.
+"""본측정 physics_gate + 표 + 분석.  사용법: v3_gate_table.py <preset-id>
 
 ⚠️ aggregate.py 에 넣을 수 없다 — 스키마에 P 메타데이터 열이 붙고 preset 어휘도
 v1의 {small,medium,large}가 아니다. aggregate.py 의 preset 게이트가 거부하는 것은
@@ -23,7 +23,11 @@ import numpy as np
 import pandas as pd
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PRESET = "v3n15d42L12"
+# 프리셋 식별자를 인자로 받는다. A/B/C 를 같은 게이트·같은 표로 본다.
+#   A: v3n15d42L12   (logN15 Δ42 depth12)
+#   B: v3Bn14d42L6   (logN14 Δ42 depth6  — A와 Δ 동일, 링 차원만 다름)
+#   C: v3Cn15d48L10  (logN15 Δ48 depth10 — A와 같은 N, 깊이 2단계 차이. ⚠️ Δ가 42→48로 함께 바뀐다)
+PRESET = sys.argv[1] if len(sys.argv) > 1 else "v3n15d42L12"
 GATE_BITS = 25.0
 LIB_ORDER = {"openfhe": 0, "lattigo": 1, "seal": 2}
 OPS = ["add_cc", "add_cp", "mul_cp", "mul_cc", "mul_cc_rlk", "relin", "rescale", "rot1"]

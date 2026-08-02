@@ -113,9 +113,13 @@ func main() {
 	out := flag.String("out", "timing.csv", "타이밍 CSV")
 	precout := flag.String("precout", "precision.csv", "정밀도 CSV")
 	combos := flag.String("combos", "", "\"logN:depth:delta:pcount,...\" — 지정 시 maxLevel 한 점 heavy 3종")
+	mainrun := flag.String("mainrun", "", "\"logN:depth:delta:pcount\" — 레벨 전수 · 8-op · 정밀도")
 	flag.Parse()
 	if *combos != "" {
 		*expSel = 6
+	}
+	if *mainrun != "" {
+		*expSel = 7
 	}
 
 	const q0 = 15*0 + 60
@@ -137,6 +141,17 @@ func main() {
 			cfgs = append(cfgs, cfg{d, 2, 15, 13})
 		}
 		levels = []int{13}
+		ops = []string{"add_cc", "add_cp", "mul_cp", "mul_cc", "mul_cc_rlk", "relin", "rescale", "rot1"}
+	} else if *expSel == 7 {
+		var ln, dp, dl, pc int
+		if _, err := fmt.Sscanf(strings.TrimSpace(*mainrun), "%d:%d:%d:%d", &ln, &dp, &dl, &pc); err != nil {
+			fmt.Fprintf(os.Stderr, "-mainrun 파싱 실패: %s\n", *mainrun)
+			os.Exit(2)
+		}
+		cfgs = append(cfgs, cfg{dl, pc, ln, dp})
+		for L := dp; L >= 1; L-- {
+			levels = append(levels, L)
+		}
 		ops = []string{"add_cc", "add_cp", "mul_cp", "mul_cc", "mul_cc_rlk", "relin", "rescale", "rot1"}
 	} else if *expSel == 6 {
 		// 최적 P 선정용: 임의 조합의 maxLevel 성능만.
@@ -184,7 +199,7 @@ func main() {
 	fmt.Fprintln(fo, "library,exp,logN,q0,delta,depth,dnum,PCount,logP,logQ,logQP,bound,margin,"+
 		"maxLevel,level,op,mean_us,std_us,reps,digits,ok,err")
 	var fp *os.File
-	wantPrec := *expSel == 1 || *expSel == 3 || *expSel == 5
+	wantPrec := *expSel == 1 || *expSel == 3 || *expSel == 5 || *expSel == 7
 	if wantPrec {
 		fp, err = os.Create(*precout)
 		if err != nil {

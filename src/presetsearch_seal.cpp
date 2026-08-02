@@ -56,7 +56,7 @@ static pair<double, double> measure(int reps, int warmup, const function<void()>
 int main(int argc, char** argv)
 {
     int expSel = 1, reps = 30, warmup = 3, precreps = 5;
-    string out = "timing.csv", precout = "precision.csv";
+    string out = "timing.csv", precout = "precision.csv", spec;
     for (int i = 1; i < argc; i++) {
         string a = argv[i];
         if (a == "-exp" && i + 1 < argc) expSel = stoi(argv[++i]);
@@ -65,10 +65,11 @@ int main(int argc, char** argv)
         else if (a == "-precreps" && i + 1 < argc) precreps = stoi(argv[++i]);
         else if (a == "-out" && i + 1 < argc) out = argv[++i];
         else if (a == "-precout" && i + 1 < argc) precout = argv[++i];
+        else if (a == "-mainrun" && i + 1 < argc) { spec = argv[++i]; expSel = 7; }
     }
 
-    const int logN = 15, q0 = 60, P_BITS = 60;
-    int depth = 13;
+    int logN = 15, depth = 13;
+    const int q0 = 60, P_BITS = 60;
     vector<int> deltas;
     vector<int> levels;
     vector<string> ops;
@@ -79,6 +80,14 @@ int main(int argc, char** argv)
     } else if (expSel == 2) {
         for (int d = 40; d <= 50; d++) deltas.push_back(d);
         levels = {13};
+        ops = {"add_cc", "add_cp", "mul_cp", "mul_cc", "mul_cc_rlk", "relin", "rescale", "rot1"};
+    } else if (expSel == 7) {
+        int ln = 0, dp = 0, dl = 0;
+        if (sscanf(spec.c_str(), "%d:%d:%d", &ln, &dp, &dl) != 3) {
+            cerr << "-mainrun 파싱 실패: " << spec << "\n"; return 2;
+        }
+        logN = ln; depth = dp; deltas = {dl};
+        for (int L = depth; L >= 1; L--) levels.push_back(L);
         ops = {"add_cc", "add_cp", "mul_cp", "mul_cc", "mul_cc_rlk", "relin", "rescale", "rot1"};
     } else if (expSel == 5) {
         // v3 본측정: Δ42 depth12. SEAL 은 P 가 구조상 60 고정 (logQP 624, 여유 257).
@@ -97,7 +106,7 @@ int main(int argc, char** argv)
     csv << "library,exp,logN,q0,delta,depth,dnum,PCount,logP,logQ,logQP,bound,margin,"
            "maxLevel,level,op,mean_us,std_us,reps,digits,ok,err\n";
     csv << fixed;
-    const bool wantPrec = (expSel == 1 || expSel == 3 || expSel == 5);
+    const bool wantPrec = (expSel == 1 || expSel == 3 || expSel == 5 || expSel == 7);
     if (wantPrec) {
         pcsv.open(precout);
         pcsv << "library,exp,logN,q0,delta,depth,dnum,PCount,logP,maxDigitBits,level,path,rep,bits\n";

@@ -73,6 +73,8 @@ int main(int argc, char** argv)
         else if (a == "-precout" && i + 1 < argc) precout = argv[++i];
         // -combos "logN:depth:delta:dnum,..." → maxLevel 한 점, heavy 3종 (exp 6)
         else if (a == "-combos" && i + 1 < argc) { spec = argv[++i]; expSel = 6; }
+        // -mainrun "logN:depth:delta:dnum" → 레벨 전수 · 8-op · 정밀도 (임의 프리셋 본측정)
+        else if (a == "-mainrun" && i + 1 < argc) { spec = argv[++i]; expSel = 7; }
     }
 
     std::vector<Cfg> cfgs;
@@ -105,6 +107,13 @@ int main(int argc, char** argv)
         cfgs.push_back({5, 15, 60, 42, 12, 3u});
         for (int L = 12; L >= 1; L--) levels.push_back(L);
         ops = {"add_cc", "add_cp", "mul_cp", "mul_cc", "mul_cc_rlk", "relin", "rescale", "rot1"};
+    } else if (expSel == 7) {
+        int ln = 0, dp = 0, dl = 0; unsigned dn = 0;
+        if (sscanf(spec.c_str(), "%d:%d:%d:%u", &ln, &dp, &dl, &dn) != 4) {
+            std::cerr << "-mainrun 파싱 실패: " << spec << "\n"; return 2;
+        }
+        cfgs.push_back({7, ln, 60, dl, dp, dn});
+        ops = {"add_cc", "add_cp", "mul_cp", "mul_cc", "mul_cc_rlk", "relin", "rescale", "rot1"};
     } else if (expSel == 6) {
         // 최적 P 선정용: 임의 조합의 maxLevel 성능만 본다. 레벨은 각 조합의 depth 로 잡는다.
         size_t i = 0;
@@ -130,7 +139,7 @@ int main(int argc, char** argv)
     csv << "library,exp,logN,q0,delta,depth,dnum,PCount,logP,logQ,logQP,bound,margin,"
            "maxLevel,level,op,mean_us,std_us,reps,digits,ok,err\n";
     csv << std::fixed;
-    const bool wantPrec = (expSel == 1 || expSel == 3 || expSel == 5);
+    const bool wantPrec = (expSel == 1 || expSel == 3 || expSel == 5 || expSel == 7);
     if (wantPrec) {
         pcsv.open(precout);
         pcsv << "library,exp,logN,q0,delta,depth,dnum,PCount,logP,maxDigitBits,level,path,rep,bits\n";
@@ -205,7 +214,9 @@ int main(int argc, char** argv)
         const size_t slots = (size_t(1) << c.logN) / 2;
         std::vector<double> vec(slots, 0.5);
 
-        std::vector<int> lv = (c.exp == 6) ? std::vector<int>{c.depth} : levels;
+        std::vector<int> lv = levels;
+        if (c.exp == 6) lv = {c.depth};
+        else if (c.exp == 7) { lv.clear(); for (int L = c.depth; L >= 1; L--) lv.push_back(L); }
         for (int L : lv) {
             const uint32_t g = (uint32_t)(c.depth - L);
             Plaintext pt = cc->MakeCKKSPackedPlaintext(vec, 1, g);
@@ -269,7 +280,7 @@ int main(int argc, char** argv)
                     Plaintext r; cc->Decrypt(pk2.secretKey, z, &r); r->SetLength(slots);
                     return r->GetRealPackedValue();
                 };
-                for (int L : levels) {
+                for (int L : lv) {
                     const uint32_t gp = (uint32_t)(c.depth - L);
                     Plaintext ptx = cc->MakeCKKSPackedPlaintext(x, 1, 0);
                     auto ct = cc->Encrypt(pk2.secretKey, ptx);   // ★ 비밀키 암호화, 레벨마다 새로
