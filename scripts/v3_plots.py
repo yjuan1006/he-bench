@@ -328,7 +328,63 @@ def plot_crossings(d, op, fname):
     save(fig, fname)
 
 
-# ═════════════════════════════════════ 5) 곡선 분기
+# ═════════════════════════════════════ 5) 곡선 분기 — 요약(막대) + 상세(곡선)
+def plot_divergence_bars(d):
+    """핵심 주장만 남긴 요약판: L1 에서의 분기값 4개를 막대로.
+
+    곡선 전체를 그리면 C 가 톱니처럼 튀어(두 라이브러리의 digit 전이 위치가 달라서)
+    정작 주장인 '방향 역전'이 묻힌다. 주장은 L1 한 점에 담겨 있으므로 그것만 그린다.
+    상세 곡선은 curve_divergence_full.png 로 남겨 둔다.
+    """
+    dd = d[(d["mode"] == "1t") & (d.op == "rot1")]
+    order = ["A", "C", "B", "D"]          # 대조쌍 A·C 를 먼저 붙여 역전이 바로 보이게
+    vals, labs = [], []
+    for preset in order:
+        g = dd[dd.preset == preset]
+        o = g[g.library == "openfhe"].set_index("level").mean_us.sort_index()
+        l = g[g.library == "lattigo"].set_index("level").mean_us.sort_index()
+        mx = max(o.index)
+        vals.append((o[1] / o[mx]) / (l[1] / l[mx]))
+        labs.append((int(g[g.library == "openfhe"].logP.iloc[0]),
+                     int(g[g.library == "lattigo"].logP.iloc[0])))
+
+    fig, ax = plt.subplots(figsize=(10.5, 7.0))
+    for i, (preset, v, (pO, pL)) in enumerate(zip(order, vals, labs)):
+        key = preset in ("A", "C")
+        ax.bar([i], [v - 1.0], 0.55, bottom=1.0, color=PCOLOR[preset],
+               alpha=1.0 if key else 0.32, edgecolor="white", linewidth=1.2,
+               zorder=3)
+        ax.annotate(f"{v:.3f}", (i, v), textcoords="offset points",
+                    xytext=(0, 8 if v > 1 else -20), ha="center",
+                    fontsize=16, fontweight="bold" if key else "normal",
+                    color=PCOLOR[preset], zorder=4)
+    ax.axhline(1.0, color="0.15", linewidth=3.2, zorder=2)
+    ax.set_xticks(range(4))
+    def xlab(p, pO, pL):
+        which = "OF smaller" if pO < pL else ("LA smaller" if pL < pO else "equal")
+        return f"{p}\nlogP  OF {pO} / LA {pL}\n({which})"
+    ax.set_xticklabels([xlab(p, pO, pL) for p, (pO, pL) in zip(order, labs)], fontsize=14)
+    lo, hi = min(vals), max(vals)
+    ax.set_ylim(lo - 0.09, hi + 0.09)
+    ax.set_ylabel("shape ratio at L1   (OF / OF[max]) ÷ (LA / LA[max])")
+    ax.annotate("↑  above 1 : Lattigo falls deeper", (0.015, 0.975),
+                xycoords="axes fraction", ha="left", va="top",
+                fontsize=14, color="0.2", fontweight="bold")
+    ax.annotate("↓  below 1 : OpenFHE falls deeper", (0.015, 0.025),
+                xycoords="axes fraction", ha="left", va="bottom",
+                fontsize=14, color="0.2", fontweight="bold")
+    ax.set_title("Whichever library carries the smaller P\nfalls deeper at low levels")
+    ax.grid(True, axis="y", color="0.93", linewidth=0.6); ax.set_axisbelow(True)
+    fig.text(0.5, -0.10,
+             "A and C are the test pair — they swap which library has the smaller P, and the "
+             "divergence flips sign (0.792 ↔ 1.184).\n"
+             "B and D have EQUAL logP yet still diverge (0.848, 0.920): a residual library "
+             "overhead the P-floor account does not explain.\n"
+             "rot1, 1t. Full level-by-level curves: curve_divergence_full.png",
+             ha="center", fontsize=12, color="0.3")
+    save(fig, "curve_divergence.png")
+
+
 def plot_divergence(d):
     dd = d[(d["mode"] == "1t") & (d.op == "rot1")]
     fig, ax = plt.subplots(figsize=(12.5, 7.0))
@@ -375,7 +431,7 @@ def plot_divergence(d):
              "C is saw-toothed because it is the only preset where the two libraries have DIFFERENT "
              "digit sequences, so their steps land on different levels.   rot1, 1t.",
              ha="center", fontsize=12, color="0.3")
-    save(fig, "curve_divergence.png")
+    save(fig, "curve_divergence_full.png")
 
 
 # ═════════════════════════════════════ 6) mt / 1t
@@ -436,11 +492,16 @@ if __name__ == "__main__":
     d = load()
     plot_summary_bars(d)
     plot_levels(d)
-    plot_digit_steps(d)
-    # 교차점 전용 그림은 2026-08-02 산출물에서 뺐다(파일도 삭제). 함수는 남겨 둔다 —
-    # 다시 필요하면 아래 두 줄의 주석을 풀면 된다. 지난 판은 커밋 261f082 에 있다.
+    # ── 2026-08-02 산출물에서 뺀 그림들 ─────────────────────────────────────
+    # 남는 것은 summary 6장 + levels 24장뿐이다. 아래 함수들은 **지우지 않는다** —
+    # 필요해지면 해당 줄의 주석만 풀면 그대로 다시 그려진다.
+    # 지난 판을 꺼낼 곳:  git show <커밋>:plots/v3/<파일>
+    #   digit_steps.png / crossings_*.png / mt_over_1t.png  → 261f082
+    #   curve_divergence.png 곡선판 → 261f082,  막대판 → 4732076
+    #   plot_digit_steps(d)
     #   for op in ["rot1", "relin", "mul_cc_rlk"]:
     #       plot_crossings(d, op, f"crossings_{op}.png")
-    plot_divergence(d)
-    plot_mt_ratio(d)
+    #   plot_divergence_bars(d)     # 요약(막대)
+    #   plot_divergence(d)          # 상세(곡선) → curve_divergence_full.png
+    #   plot_mt_ratio(d)
     print(f"\n총 {len([f for f in os.listdir(OUT) if f.endswith('.png')])}장")
