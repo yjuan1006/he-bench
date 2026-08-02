@@ -56,7 +56,7 @@ static pair<double, double> measure(int reps, int warmup, const function<void()>
 int main(int argc, char** argv)
 {
     int expSel = 1, reps = 30, warmup = 3, precreps = 5;
-    string out = "timing.csv", precout = "precision.csv", spec;
+    string out = "timing.csv", precout = "precision.csv", spec, thlabel = "1t";
     for (int i = 1; i < argc; i++) {
         string a = argv[i];
         if (a == "-exp" && i + 1 < argc) expSel = stoi(argv[++i]);
@@ -66,6 +66,7 @@ int main(int argc, char** argv)
         else if (a == "-out" && i + 1 < argc) out = argv[++i];
         else if (a == "-precout" && i + 1 < argc) precout = argv[++i];
         else if (a == "-mainrun" && i + 1 < argc) { spec = argv[++i]; expSel = 7; }
+        else if (a == "-threads" && i + 1 < argc) thlabel = argv[++i];
     }
 
     int logN = 15, depth = 13;
@@ -103,8 +104,11 @@ int main(int argc, char** argv)
     }
 
     ofstream csv(out), pcsv;
+    // SEAL 은 내부 병렬화가 없다(native/src/seal 전체에 #pragma omp 0건) → nthreads 는 항상 1.
+    const int nthreads = 1;
+    cerr << "[seal] threads=" << thlabel << " (SEAL 내부 병렬화 없음 → 실사용 1)\n";
     csv << "library,exp,logN,q0,delta,depth,dnum,PCount,logP,logQ,logQP,bound,margin,"
-           "maxLevel,level,op,mean_us,std_us,reps,digits,ok,err\n";
+           "maxLevel,level,op,mean_us,std_us,reps,digits,threads,nthreads,ok,err\n";
     csv << fixed;
     const bool wantPrec = (expSel == 1 || expSel == 3 || expSel == 5 || expSel == 7);
     if (wantPrec) {
@@ -125,13 +129,13 @@ int main(int argc, char** argv)
             string err = e.what();
             for (auto& ch : err) if (ch == ',' || ch == '\n') ch = ' ';
             csv << "seal," << expSel << "," << logN << "," << q0 << "," << delta << "," << depth
-                << ",,,,,,,,,,,,,,,0," << err << "\n";
+                << ",,,,,,,,,,,,,," << thlabel << "," << nthreads << ",0," << err << "\n";
             continue;
         }
         SEALContext ctx(parms, true, sec_level_type::none);
         if (!ctx.parameters_set()) {
             csv << "seal," << expSel << "," << logN << "," << q0 << "," << delta << "," << depth
-                << ",,,,,,,,,,,,,,,0," << ctx.parameter_error_message() << "\n";
+                << ",,,,,,,,,,,,,," << thlabel << "," << nthreads << ",0," << ctx.parameter_error_message() << "\n";
             continue;
         }
 
@@ -203,7 +207,7 @@ int main(int argc, char** argv)
                             << depth << "," << dnum << "," << pCount << "," << logP << "," << logQ
                             << "," << logQP << "," << bound << "," << margin << "," << depth << ","
                             << L << "," << op << "," << setprecision(3) << r.second.first << ","
-                            << r.second.second << "," << reps << "," << digits << ",1,\n";
+                            << r.second.second << "," << reps << "," << digits << "," << thlabel << "," << nthreads << ",1,\n";
             csv.flush();
             cerr << "  L=" << L << " done\n";
         }

@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 
@@ -114,6 +115,7 @@ func main() {
 	precout := flag.String("precout", "precision.csv", "정밀도 CSV")
 	combos := flag.String("combos", "", "\"logN:depth:delta:pcount,...\" — 지정 시 maxLevel 한 점 heavy 3종")
 	mainrun := flag.String("mainrun", "", "\"logN:depth:delta:pcount\" — 레벨 전수 · 8-op · 정밀도")
+	thlabel := flag.String("threads", "1t", "스레드 조건 라벨 (기록용)")
 	flag.Parse()
 	if *combos != "" {
 		*expSel = 6
@@ -196,8 +198,13 @@ func main() {
 		panic(err)
 	}
 	defer fo.Close()
+	// nthreads = GOMAXPROCS 런타임 실측. Lattigo 는 단건 연산 내부를 병렬화하지 않으므로
+	// 이 값이 커도 op 내부는 단일 스레드다 — 늘어난 것은 런타임(GC 등)이 쓸 수 있는 코어 수다.
+	nthreads := runtime.GOMAXPROCS(0)
+	fmt.Fprintf(os.Stderr, "[lattigo] threads=%s GOMAXPROCS=%d NumCPU=%d (op 내부 병렬화 없음)\n",
+		*thlabel, nthreads, runtime.NumCPU())
 	fmt.Fprintln(fo, "library,exp,logN,q0,delta,depth,dnum,PCount,logP,logQ,logQP,bound,margin,"+
-		"maxLevel,level,op,mean_us,std_us,reps,digits,ok,err")
+		"maxLevel,level,op,mean_us,std_us,reps,digits,threads,nthreads,ok,err")
 	var fp *os.File
 	wantPrec := *expSel == 1 || *expSel == 3 || *expSel == 5 || *expSel == 7
 	if wantPrec {
@@ -233,8 +240,8 @@ func main() {
 		})
 		if perr != nil {
 			msg := strings.NewReplacer(",", " ", "\n", " ").Replace(perr.Error())
-			fmt.Fprintf(fo, "lattigo,%d,%d,%d,%d,%d,,,,,,,,,,,,,,,0,%s\n",
-				*expSel, logN, q0, c.delta, depth, msg)
+			fmt.Fprintf(fo, "lattigo,%d,%d,%d,%d,%d,,,,,,,,,,,,,,,%s,%d,0,%s\n",
+				*expSel, logN, q0, c.delta, depth, *thlabel, nthreads, msg)
 			fmt.Fprintf(os.Stderr, "[skip] Δ=%d PCount=%d: %s\n", c.delta, c.pcount, msg)
 			continue
 		}
@@ -354,9 +361,9 @@ func main() {
 
 			for _, op := range ops {
 				r := res[op]
-				fmt.Fprintf(fo, "lattigo,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s,%.3f,%.3f,%d,%s,1,\n",
+				fmt.Fprintf(fo, "lattigo,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s,%.3f,%.3f,%d,%s,%s,%d,1,\n",
 					*expSel, logN, q0, c.delta, depth, dnum, len(pm), sumP, sumQ, logQP,
-					bound, margin, maxLevel, L, op, r[0], r[1], *reps, digits)
+					bound, margin, maxLevel, L, op, r[0], r[1], *reps, digits, *thlabel, nthreads)
 			}
 			fo.Sync()
 			fmt.Fprintf(os.Stderr, "  L=%d done\n", L)

@@ -16,6 +16,7 @@
 #include "openfhe.h"
 #include "precision_common.h"
 #include "schemerns/rns-cryptoparameters.h"
+#include <omp.h>
 
 #include <chrono>
 #include <cmath>
@@ -62,7 +63,7 @@ struct Cfg { int exp, logN, q0, delta, depth; uint32_t dnum; };
 int main(int argc, char** argv)
 {
     int expSel = 1, reps = 30, warmup = 3, precreps = 5;
-    std::string out = "timing.csv", precout = "precision.csv", spec;
+    std::string out = "timing.csv", precout = "precision.csv", spec, thlabel = "1t";
     for (int i = 1; i < argc; i++) {
         std::string a = argv[i];
         if (a == "-exp" && i + 1 < argc) expSel = std::stoi(argv[++i]);
@@ -75,6 +76,7 @@ int main(int argc, char** argv)
         else if (a == "-combos" && i + 1 < argc) { spec = argv[++i]; expSel = 6; }
         // -mainrun "logN:depth:delta:dnum" → 레벨 전수 · 8-op · 정밀도 (임의 프리셋 본측정)
         else if (a == "-mainrun" && i + 1 < argc) { spec = argv[++i]; expSel = 7; }
+        else if (a == "-threads" && i + 1 < argc) thlabel = argv[++i];
     }
 
     std::vector<Cfg> cfgs;
@@ -136,8 +138,11 @@ int main(int argc, char** argv)
     }
 
     std::ofstream csv(out), pcsv;
+    // nthreads = omp_get_max_threads() 런타임 실측 — OMP_NUM_THREADS 가 실제로 먹혔는지 기록한다.
+    const int nthreads = omp_get_max_threads();
+    std::cerr << "[openfhe] threads=" << thlabel << " omp_get_max_threads()=" << nthreads << "\n";
     csv << "library,exp,logN,q0,delta,depth,dnum,PCount,logP,logQ,logQP,bound,margin,"
-           "maxLevel,level,op,mean_us,std_us,reps,digits,ok,err\n";
+           "maxLevel,level,op,mean_us,std_us,reps,digits,threads,nthreads,ok,err\n";
     csv << std::fixed;
     const bool wantPrec = (expSel == 1 || expSel == 3 || expSel == 5 || expSel == 7);
     if (wantPrec) {
@@ -161,7 +166,7 @@ int main(int argc, char** argv)
             std::string err = e.what();
             for (auto& ch : err) if (ch == ',' || ch == '\n' || ch == '\r') ch = ' ';
             csv << "openfhe," << c.exp << "," << c.logN << "," << c.q0 << "," << c.delta << ","
-                << c.depth << "," << c.dnum << ",,,,,,,,,,,,,,0," << err << "\n";
+                << c.depth << "," << c.dnum << ",,,,,,,,,,,,,," << thlabel << "," << nthreads << ",0," << err << "\n";
             std::cerr << "[skip] delta=" << c.delta << " dnum=" << c.dnum << ": " << err << "\n";
             continue;
         }
@@ -170,7 +175,7 @@ int main(int argc, char** argv)
         // 링 차원이 요청대로인지 확인 — 검사가 켜지면 OpenFHE가 N을 조용히 올린다.
         if (cc->GetRingDimension() != (1u << c.logN)) {
             csv << "openfhe," << c.exp << "," << c.logN << "," << c.q0 << "," << c.delta << ","
-                << c.depth << "," << c.dnum << ",,,,,,,,,,,,,,0,ring dim changed\n";
+                << c.depth << "," << c.dnum << ",,,,,,,,,,,,,," << thlabel << "," << nthreads << ",0,ring dim changed\n";
             continue;
         }
 
@@ -258,7 +263,7 @@ int main(int argc, char** argv)
                             << logP << "," << logQ << "," << logQP << "," << bound << ","
                             << margin << "," << c.depth << "," << L << "," << op << ","
                             << std::setprecision(3) << r.second.first << "," << r.second.second
-                            << "," << reps << "," << digits << ",1,\n";
+                            << "," << reps << "," << digits << "," << thlabel << "," << nthreads << ",1,\n";
             csv.flush();
             std::cerr << "  L=" << L << " done\n";
         }

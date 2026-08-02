@@ -27,10 +27,20 @@ ROOT="$(cd "$HERE/.." && pwd)"
 CORES=$1; NTHREADS=$2; WARM=$3; PROBE=$4; shift 4
 mkdir -p "$(dirname "$PROBE")"
 
+# 프로브를 어느 코어에서 잴 것인가. 기본값은 작업과 같은 집합(=1t 기존 동작 그대로).
+#
+# ⚠️ mt 에서 CORES 가 여러 코어면 calib 이 코어 사이를 이주하다 **식은 코어**에 얹혀
+#   82.6ms(turbo) 로 시작했다가 138ms(base) 로 튄다. 실측(2026-08-02):
+#     openfhe mt pre  82.57 82.64 ... 133.91 138.41 138.06
+#     lattigo mt post 138.41 137.92 ... (전부 base)
+#   측정 스레드가 점유한 코어는 뜨겁지만 나머지는 유휴라 프로브가 그 코어를 못 맞춘다.
+#   → mt 에서는 PROBE_CORE 로 **실제로 바쁜 코어 하나**를 지정해 프로브를 고정한다.
+PROBE_CORE="${PROBE_CORE:-$CORES}"
+
 # 핀한 셸 안에서: 가열 → 사전 프로브 → exec.
 # 사전 프로브도 같은 핀된 코어에서 돌므로 그 자체가 코어를 계속 바쁘게 유지한다.
 taskset -c "$CORES" bash -c '
-  ROOT="$1"; NT="$2"; WARM="$3"; PROBE="$4"; shift 4
+  ROOT="$1"; NT="$2"; WARM="$3"; PROBE="$4"; PC="$5"; shift 5
   pids=""
   i=1
   while [ "$i" -lt "$NT" ]; do
@@ -42,12 +52,12 @@ taskset -c "$CORES" bash -c '
   end=$((SECONDS+WARM)); while [ $SECONDS -lt $end ]; do :; done
   for p in $pids; do wait "$p" 2>/dev/null; done
   # 사전 프로브: 유휴 틈 없이 바로 이어서
-  "$ROOT/calib" 1 > "${PROBE}_pre.txt" 2>/dev/null
+  taskset -c "$PC" "$ROOT/calib" 1 > "${PROBE}_pre.txt" 2>/dev/null
   exec "$@"
-' _ "$ROOT" "$NTHREADS" "$WARM" "$PROBE" "$@"
+' _ "$ROOT" "$NTHREADS" "$WARM" "$PROBE" "$PROBE_CORE" "$@"
 rc=$?
 
 # 사후 프로브: 벤치가 방금까지 코어를 점유했으므로 즉시 재면 turbo 상태여야 한다
-taskset -c "$CORES" "$ROOT/calib" 1 > "${PROBE}_post.txt" 2>/dev/null
+taskset -c "$PROBE_CORE" "$ROOT/calib" 1 > "${PROBE}_post.txt" 2>/dev/null
 
 exit "$rc"
