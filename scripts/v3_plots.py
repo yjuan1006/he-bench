@@ -167,7 +167,14 @@ def plot_levels(d):
                                 linewidth=2.4, markeredgewidth=0, alpha=0.4 if bad else 1.0)
                         ax.errorbar(g.level, ms, yerr=sd, fmt="none", ecolor=LIB_COLOR[lib],
                                     elinewidth=0.8, capsize=2, capthick=0.8, alpha=0.4)
-                    ax.set_xlim(0.4, depth + 1.9)
+                    # 오른쪽 여백은 선 끝 직접 라벨("openfhe" 등) 자리다.
+                    # 패널 폭(픽셀)이 depth 와 무관하게 일정하므로 라벨이 차지하는 데이터 단위는
+                    # 데이터 범위에 비례한다 — 고정값(+1.9)을 쓰면 depth 4 에서 축 절반이 빈다.
+                    # "openfhe"(bold 12pt) + 오프셋 ≈ 105px, 축 폭 ≈ 810px → 축 폭의 약 13%.
+                    #   m/(depth-0.4+m) = 0.13  →  m ≈ 0.15*(depth-0.4)
+                    # (계수를 0.095 로 잡았더니 라벨이 패널 밖으로 삐져나가 잘렸다)
+                    pad = max(0.55, 0.15 * (depth - 0.4))
+                    ax.set_xlim(0.4, depth + pad)
                     ax.set_xticks(range(1, depth + 1))
                     ax.set_ylim(bottom=0)
                     # 선 끝(고레벨=오른쪽) 직접 라벨
@@ -176,20 +183,14 @@ def plot_levels(d):
                         ax.annotate(lib, (depth, yv), textcoords="offset points",
                                     xytext=(9, 4 - 15 * k), color=LIB_COLOR[lib],
                                     fontsize=12, fontweight="bold", annotation_clip=False)
-                    # 교차점 주석 + L1 배율 수집
+                    # L1 배율 수집 (선형 y 축에서 눌리는 저레벨 구간의 보완 지표)
+                    # ⚠️ 교차점은 여기 그리지 않는다 — 전용 그림 crossings_{op}.png 가 담당한다.
+                    #   레벨 곡선에 세로선을 겹치면 곡선 자체를 읽는 데 방해가 됐다.
                     for a, b in [("seal", "openfhe"), ("seal", "lattigo"), ("openfhe", "lattigo")]:
                         if a not in series or b not in series:
                             continue
                         if op in GC_OPS and "lattigo" in (a, b):
                             continue          # GC 영향군은 판정하지 않는다
-                        c, r, xs = crossings(series[a], series[b])
-                        lo, _, _ = crossings(series[a], series[b], 1 - DRIFT)
-                        hi, _, _ = crossings(series[a], series[b], 1 + DRIFT)
-                        if c and lo and hi:
-                            ax.axvline(c[0], color="0.45", linestyle="--", linewidth=1.5, zorder=0)
-                            ax.annotate(f"{a[:2].upper()}↔{b[:2].upper()}  L={c[0]:.2f}",
-                                        (c[0], ax.get_ylim()[1] * 0.98), rotation=90,
-                                        ha="right", va="top", fontsize=11, color="0.2")
                         l1.append(f"{op} {a[:2].upper()}/{b[:2].upper()} "
                                   f"{series[a][1] / series[b][1]:.2f}")
                     ax.set_title(op)
