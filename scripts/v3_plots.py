@@ -437,8 +437,10 @@ if __name__ == "__main__":
     plot_summary_bars(d)
     plot_levels(d)
     plot_digit_steps(d)
-    for op in ["rot1", "relin", "mul_cc_rlk"]:
-        plot_crossings(d, op, f"crossings_{op}.png")
+    # 교차점 전용 그림은 2026-08-02 산출물에서 뺐다(파일도 삭제). 함수는 남겨 둔다 —
+    # 다시 필요하면 아래 두 줄의 주석을 풀면 된다. 지난 판은 커밋 261f082 에 있다.
+    #   for op in ["rot1", "relin", "mul_cc_rlk"]:
+    #       plot_crossings(d, op, f"crossings_{op}.png")
     plot_divergence(d)
     plot_mt_ratio(d)
     print(f"\n총 {len([f for f in os.listdir(OUT) if f.endswith('.png')])}장")
