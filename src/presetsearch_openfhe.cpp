@@ -62,7 +62,7 @@ struct Cfg { int exp, logN, q0, delta, depth; uint32_t dnum; };
 int main(int argc, char** argv)
 {
     int expSel = 1, reps = 30, warmup = 3, precreps = 5;
-    std::string out = "timing.csv", precout = "precision.csv";
+    std::string out = "timing.csv", precout = "precision.csv", spec;
     for (int i = 1; i < argc; i++) {
         std::string a = argv[i];
         if (a == "-exp" && i + 1 < argc) expSel = std::stoi(argv[++i]);
@@ -71,6 +71,8 @@ int main(int argc, char** argv)
         else if (a == "-precreps" && i + 1 < argc) precreps = std::stoi(argv[++i]);
         else if (a == "-out" && i + 1 < argc) out = argv[++i];
         else if (a == "-precout" && i + 1 < argc) precout = argv[++i];
+        // -combos "logN:depth:delta:dnum,..." → maxLevel 한 점, heavy 3종 (exp 6)
+        else if (a == "-combos" && i + 1 < argc) { spec = argv[++i]; expSel = 6; }
     }
 
     std::vector<Cfg> cfgs;
@@ -103,6 +105,18 @@ int main(int argc, char** argv)
         cfgs.push_back({5, 15, 60, 42, 12, 3u});
         for (int L = 12; L >= 1; L--) levels.push_back(L);
         ops = {"add_cc", "add_cp", "mul_cp", "mul_cc", "mul_cc_rlk", "relin", "rescale", "rot1"};
+    } else if (expSel == 6) {
+        // 최적 P 선정용: 임의 조합의 maxLevel 성능만 본다. 레벨은 각 조합의 depth 로 잡는다.
+        size_t i = 0;
+        while (i < spec.size()) {
+            size_t j = spec.find(',', i); if (j == std::string::npos) j = spec.size();
+            int ln = 0, dp = 0, dl = 0; unsigned dn = 0;
+            if (sscanf(spec.substr(i, j - i).c_str(), "%d:%d:%d:%u", &ln, &dp, &dl, &dn) == 4)
+                cfgs.push_back({6, ln, 60, dl, dp, dn});
+            else std::cerr << "[warn] 조합 파싱 실패: " << spec.substr(i, j - i) << "\n";
+            i = j + 1;
+        }
+        ops = {"mul_cc_rlk", "relin", "rot1"};
     } else {
         // 본측정: 탐색으로 확정된 프리셋. dnum 3 → PCount 4 / logP 240 / logQP 820.
         // (logP 300 = dnum 2 가 더 빠르지만 rot1 정밀도 23.31로 하한 25비트 미달.
@@ -191,7 +205,8 @@ int main(int argc, char** argv)
         const size_t slots = (size_t(1) << c.logN) / 2;
         std::vector<double> vec(slots, 0.5);
 
-        for (int L : levels) {
+        std::vector<int> lv = (c.exp == 6) ? std::vector<int>{c.depth} : levels;
+        for (int L : lv) {
             const uint32_t g = (uint32_t)(c.depth - L);
             Plaintext pt = cc->MakeCKKSPackedPlaintext(vec, 1, g);
             Plaintext pt0 = cc->MakeCKKSPackedPlaintext(vec, 1, 0);

@@ -146,4 +146,9 @@ if(BENCH_SEAL)
     target_compile_options(presetsearch_seal PRIVATE -Wall -O3)
     target_include_directories(presetsearch_seal PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
     target_link_libraries(presetsearch_seal ${SEAL_TARGET})
+
+    # 프리셋 격자 탐색용 파라미터 덤프(벤치 없음).
+    add_executable(param_dump_seal_grid src/param_dump_seal_grid.cpp)
+    target_compile_options(param_dump_seal_grid PRIVATE -Wall -O3)
+    target_link_libraries(param_dump_seal_grid ${SEAL_TARGET})
 endif()

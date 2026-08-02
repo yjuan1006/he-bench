@@ -25,6 +25,7 @@ ksprec_openfhe
 ksprec_seal
 presetsearch_openfhe
 presetsearch_seal
+param_dump_seal_grid
 seal_probe
 seal_align
 *.o

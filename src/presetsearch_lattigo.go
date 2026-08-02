@@ -101,6 +101,8 @@ func measure(reps, warmup int, fn func() error) (float64, float64) {
 type cfg struct {
 	delta  int
 	pcount int
+	logN   int
+	depth  int
 }
 
 func main() {
@@ -110,9 +112,14 @@ func main() {
 	precreps := flag.Int("precreps", 5, "정밀도 반복")
 	out := flag.String("out", "timing.csv", "타이밍 CSV")
 	precout := flag.String("precout", "precision.csv", "정밀도 CSV")
+	combos := flag.String("combos", "", "\"logN:depth:delta:pcount,...\" — 지정 시 maxLevel 한 점 heavy 3종")
 	flag.Parse()
+	if *combos != "" {
+		*expSel = 6
+	}
 
-	const logN, q0 = 15, 60
+	const q0 = 15*0 + 60
+	logN := 15
 	depth := 13
 
 	var cfgs []cfg
@@ -120,23 +127,34 @@ func main() {
 	var ops []string
 	if *expSel == 1 {
 		for pc := 1; pc <= 5; pc++ {
-			cfgs = append(cfgs, cfg{40, pc})
+			cfgs = append(cfgs, cfg{40, pc, 15, 13})
 		}
 		levels = []int{13, 7, 1}
 		ops = []string{"mul_cc", "mul_cc_rlk", "relin", "rot1"}
 	} else if *expSel == 2 {
 		// logP 120 고정 = PCount 2 (dnum은 ceil(14/2)=7 로 종속 결정)
 		for d := 40; d <= 50; d++ {
-			cfgs = append(cfgs, cfg{d, 2})
+			cfgs = append(cfgs, cfg{d, 2, 15, 13})
 		}
 		levels = []int{13}
 		ops = []string{"add_cc", "add_cp", "mul_cp", "mul_cc", "mul_cc_rlk", "relin", "rescale", "rot1"}
+	} else if *expSel == 6 {
+		// 최적 P 선정용: 임의 조합의 maxLevel 성능만.
+		for _, tok := range strings.Split(*combos, ",") {
+			var ln, dp, dl, pc int
+			if _, err := fmt.Sscanf(strings.TrimSpace(tok), "%d:%d:%d:%d", &ln, &dp, &dl, &pc); err != nil {
+				fmt.Fprintf(os.Stderr, "[warn] 조합 파싱 실패: %s\n", tok)
+				continue
+			}
+			cfgs = append(cfgs, cfg{dl, pc, ln, dp})
+		}
+		ops = []string{"mul_cc_rlk", "relin", "rot1"}
 	} else if *expSel == 4 {
 		// P 선택 확인: depth 12 / Δ 42 에서 PCount 5/4/3 (logP 300/240/180) 비교.
 		// dnum 은 ceil(#Q/#P) 로 종속 결정되므로 각 PCount 에서 실제 값을 기록한다.
 		depth = 12
 		for _, pc := range []int{5, 4, 3} {
-			cfgs = append(cfgs, cfg{42, pc})
+			cfgs = append(cfgs, cfg{42, pc, 15, 12})
 		}
 		levels = []int{12}
 		ops = []string{"mul_cc_rlk", "relin", "rot1"}
@@ -144,14 +162,14 @@ func main() {
 		// v3 본측정: Δ42 depth12 (QCount 13). PCount 5 → logP 300, dnum 3(종속), logQP 864, 여유 17.
 		// QCount 13 에서도 ceil(13/5)=3 이라 depth13 과 같은 dnum 이 나온다.
 		depth = 12
-		cfgs = append(cfgs, cfg{42, 5})
+		cfgs = append(cfgs, cfg{42, 5, 15, 12})
 		for L := depth; L >= 1; L-- {
 			levels = append(levels, L)
 		}
 		ops = []string{"add_cc", "add_cp", "mul_cp", "mul_cc", "mul_cc_rlk", "relin", "rescale", "rot1"}
 	} else {
 		// 본측정: 확정 프리셋. PCount 5 → logP 300, dnum 3 (종속), logQP 880.
-		cfgs = append(cfgs, cfg{40, 5})
+		cfgs = append(cfgs, cfg{40, 5, 15, 13})
 		for L := depth; L >= 1; L-- {
 			levels = append(levels, L)
 		}
@@ -177,6 +195,15 @@ func main() {
 	}
 
 	for _, c := range cfgs {
+		if c.logN > 0 {
+			logN = c.logN
+		}
+		if c.depth > 0 {
+			depth = c.depth
+		}
+		if *expSel == 6 {
+			levels = []int{depth}
+		}
 		logQ := []int{q0}
 		for i := 0; i < depth; i++ {
 			logQ = append(logQ, c.delta)
