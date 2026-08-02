@@ -24,19 +24,43 @@ using namespace std;
 
 struct Combo { int logN, q0, delta, depth; uint32_t dnum; };
 
+// "depth:delta:dnum,depth:delta:dnum,..." 를 파싱한다. logN·q0는 고정.
+static vector<Combo> ParseCombos(const string &spec, int logN, int q0)
+{
+    vector<Combo> out;
+    size_t i = 0;
+    while (i < spec.size()) {
+        size_t j = spec.find(',', i);
+        if (j == string::npos) j = spec.size();
+        string tok = spec.substr(i, j - i);
+        int dp = 0, dl = 0; unsigned dn = 0;
+        if (sscanf(tok.c_str(), "%d:%d:%u", &dp, &dl, &dn) == 3)
+            out.push_back({logN, q0, dl, dp, dn});
+        else
+            fprintf(stderr, "[warn] 조합 파싱 실패: %s\n", tok.c_str());
+        i = j + 1;
+    }
+    return out;
+}
+
 int main(int argc, char **argv)
 {
-    int reps = 5;
-    for (int i = 1; i < argc - 1; i++)
+    int reps = 5, logN = 15, q0 = 60;
+    string spec;
+    for (int i = 1; i < argc - 1; i++) {
         if (!strcmp(argv[i], "-reps")) reps = atoi(argv[++i]);
+        else if (!strcmp(argv[i], "-combos")) spec = argv[++i];
+        else if (!strcmp(argv[i], "-logN")) logN = atoi(argv[++i]);
+        else if (!strcmp(argv[i], "-q0")) q0 = atoi(argv[++i]);
+    }
 
-    // param_dump 스윕에서 logQP ≤ tc128 상한(881)을 만족한 dnum만 쓴다.
-    // 상한 초과 조합은 애초에 후보가 아니므로 측정하지 않는다.
-    const vector<Combo> combos = {
+    // 기본값 = v2 탐색 당시 조합(재현용). -combos 로 덮어쓴다.
+    vector<Combo> combos = {
         {15, 60, 40, 13, 2}, {15, 60, 40, 13, 3}, {15, 60, 40, 13, 4},
         {15, 60, 40, 13, 5}, {15, 60, 40, 13, 7}, {15, 60, 40, 13, 14},
         {15, 60, 45, 13, 5}, {15, 60, 45, 13, 7}, {15, 60, 45, 13, 14},
     };
+    if (!spec.empty()) combos = ParseCombos(spec, logN, q0);
 
     printf("library,logN,q0,delta,depth,dnum,PCount,logP,maxDigitBits,level,path,rep,bits\n");
 

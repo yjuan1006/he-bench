@@ -15,11 +15,29 @@ using namespace std;
 
 int main(int argc, char **argv)
 {
-    int reps = 5;
-    for (int i = 1; i < argc - 1; i++)
+    int reps = 5, logN = 15, q0 = 60;
+    string spec = "13:40";   // "depth:delta,..." (SEAL은 P가 고정이라 셋째 인자를 받지 않는다)
+    for (int i = 1; i < argc - 1; i++) {
         if (!strcmp(argv[i], "-reps")) reps = atoi(argv[++i]);
-
-    const int logN = 15, q0 = 60, delta = 40, depth = 13;
+        else if (!strcmp(argv[i], "-combos")) spec = argv[++i];
+        else if (!strcmp(argv[i], "-logN")) logN = atoi(argv[++i]);
+        else if (!strcmp(argv[i], "-q0")) q0 = atoi(argv[++i]);
+    }
+    vector<pair<int,int>> combos;   // (depth, delta)
+    {
+        size_t i = 0;
+        while (i < spec.size()) {
+            size_t j = spec.find(',', i); if (j == string::npos) j = spec.size();
+            int dp = 0, dl = 0;
+            // "d:Δ" 또는 "d:Δ:x"(x 무시) 둘 다 받는다 — 세 라이브러리 드라이버를 공유하기 위해.
+            if (sscanf(spec.substr(i, j - i).c_str(), "%d:%d", &dp, &dl) == 2)
+                combos.push_back({dp, dl});
+            i = j + 1;
+        }
+    }
+    printf("library,logN,q0,delta,depth,dnum,PCount,logP,maxDigitBits,level,path,rep,bits\n");
+    for (auto &cb : combos) {
+    const int delta = cb.second, depth = cb.first;
     const size_t N = size_t(1) << logN;
 
     vector<int> bits = {q0};
@@ -53,8 +71,6 @@ int main(int argc, char **argv)
     vector<double> want_rot(slots);
     for (size_t i = 0; i < slots; i++) want_rot[i] = x[(i + 1) % slots];
     const double scale = pow(2.0, delta);
-
-    printf("library,logN,q0,delta,depth,dnum,PCount,logP,maxDigitBits,level,path,rep,bits\n");
 
     for (int rep = 0; rep < reps; rep++) {
         KeyGenerator keygen(ctx);
@@ -91,6 +107,7 @@ int main(int argc, char **argv)
         evaluator.rotate_vector(ct_x, 1, gks, ct_rot);
         report("rot1", dec(ct_rot), want_rot);
         fflush(stdout);
+    }
     }
     return 0;
 }

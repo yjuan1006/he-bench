@@ -150,6 +150,43 @@ static void RunPresets()
     }
 }
 
+// 대안 프리셋 탐색용 격자 스윕: logN·q0 고정, (depth, Δ) 격자 × dnum 전수.
+// logQ 밴드로 걸러 후보만 남긴다 — depth를 줄이고 Δ를 올려 정밀도·보안 여유를 동시에 버는 축.
+static void RunGrid(const std::string& outPath, int logN, int q0,
+                    int dmin, int dmax, int dlmin, int dlmax, int qlo, int qhi)
+{
+    std::ofstream csv(outPath);
+    if (!csv) { std::cerr << "출력 파일을 열 수 없다: " << outPath << "\n"; std::exit(2); }
+    csv << "logN,q0,delta,depth,dnum_req,ok,err,auxBits,ksTech,"
+           "QCount,logQ,logQ_bits,dnum,perPart,maxDigitBits,PCount,logP,logP_bits,"
+           "logQP,logQP_bits,bound_tc128,margin,digits\n";
+    int nOk = 0, nFail = 0, nSkip = 0;
+    for (int depth = dmin; depth <= dmax; depth++) {
+        for (int delta = dlmin; delta <= dlmax; delta++) {
+            const int logQnom = q0 + depth * delta;
+            if (logQnom < qlo || logQnom > qhi) { nSkip++; continue; }
+            for (uint32_t dnum = 1; dnum <= (uint32_t)(depth + 1); dnum++) {
+                Dump d = Probe(logN, depth, q0, delta, dnum);
+                const int bound = TC128Bound(logN);
+                csv << logN << "," << q0 << "," << delta << "," << depth << "," << dnum << ","
+                    << (d.ok ? 1 : 0) << "," << d.err << ",";
+                if (d.ok) {
+                    const int logQP = d.logQ + d.logP;
+                    csv << d.auxBits << "," << d.ksTech << "," << d.qCount << "," << d.logQ << ","
+                        << d.logQbits << "," << d.dnum << "," << d.perPart << "," << d.maxDigitBits
+                        << "," << d.pCount << "," << d.logP << "," << d.logPbits << "," << logQP
+                        << "," << (d.logQbits + d.logPbits) << "," << bound << ","
+                        << (bound - logQP) << "," << d.digits << "\n";
+                    nOk++;
+                } else { csv << ",,,,,,,,,,,,,,\n"; nFail++; }
+            }
+        }
+    }
+    csv.close();
+    std::cout << "[grid] " << outPath << "  (성공 " << nOk << " / 실패 " << nFail
+              << " / logQ 밴드 밖 " << nSkip << " 조합 건너뜀)\n";
+}
+
 static void RunSweep(const std::string& outPath)
 {
     // 조합 정의 — q0는 60 고정, 깊이는 logN마다 다르다.
@@ -228,12 +265,24 @@ int main(int argc, char** argv)
 {
     std::string mode = "sweep";
     std::string out  = "params_openfhe_dnum_sweep.csv";
+    int logN = 15, q0 = 60, dmin = 9, dmax = 13, dlmin = 40, dlmax = 60, qlo = 540, qhi = 610;
     for (int i = 1; i < argc; i++) {
         if (!std::strcmp(argv[i], "-mode") && i + 1 < argc) mode = argv[++i];
         else if (!std::strcmp(argv[i], "-out") && i + 1 < argc) out = argv[++i];
-        else { std::cerr << "사용법: param_dump_openfhe [-mode sweep|presets] [-out CSV]\n"; return 2; }
+        else if (!std::strcmp(argv[i], "-logN") && i + 1 < argc) logN = std::atoi(argv[++i]);
+        else if (!std::strcmp(argv[i], "-q0") && i + 1 < argc) q0 = std::atoi(argv[++i]);
+        else if (!std::strcmp(argv[i], "-depth-min") && i + 1 < argc) dmin = std::atoi(argv[++i]);
+        else if (!std::strcmp(argv[i], "-depth-max") && i + 1 < argc) dmax = std::atoi(argv[++i]);
+        else if (!std::strcmp(argv[i], "-delta-min") && i + 1 < argc) dlmin = std::atoi(argv[++i]);
+        else if (!std::strcmp(argv[i], "-delta-max") && i + 1 < argc) dlmax = std::atoi(argv[++i]);
+        else if (!std::strcmp(argv[i], "-logq-min") && i + 1 < argc) qlo = std::atoi(argv[++i]);
+        else if (!std::strcmp(argv[i], "-logq-max") && i + 1 < argc) qhi = std::atoi(argv[++i]);
+        else { std::cerr << "사용법: param_dump_openfhe [-mode sweep|presets|grid] [-out CSV] "
+                            "[-logN N] [-q0 B] [-depth-min/-depth-max D] [-delta-min/-delta-max D] "
+                            "[-logq-min/-logq-max Q]\n"; return 2; }
     }
     if (mode == "presets") RunPresets();
+    else if (mode == "grid") RunGrid(out, logN, q0, dmin, dmax, dlmin, dlmax, qlo, qhi);
     else if (mode == "sweep") RunSweep(out);
     else { std::cerr << "알 수 없는 mode: " << mode << "\n"; return 2; }
     return 0;

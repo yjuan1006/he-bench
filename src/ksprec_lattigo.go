@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"math"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/tuneinsight/lattigo/v6/core/rlwe"
@@ -66,28 +65,50 @@ func precisionBits(got, want []float64) float64 {
 func main() {
 	reps := flag.Int("reps", 5, "반복 횟수")
 	logPFlag := flag.String("logp", "60,60", "특수소수 비트 목록 (dnum = ceil(#Q/#P) 로 종속 결정)")
+	combos := flag.String("combos", "", "\"depth:delta:pcount,...\" — 지정 시 -logp 를 무시하고 이 목록을 순회한다")
+	logNf := flag.Int("logN", 15, "링 차원 지수")
+	q0f := flag.Int("q0", 60, "첫 모듈러스 비트")
 	flag.Parse()
 
-	const logN, q0, delta, depth = 15, 60, 40, 13
+	fmt.Println("library,logN,q0,delta,depth,dnum,PCount,logP,maxDigitBits,level,path,rep,bits")
+
+	type combo struct{ depth, delta, pcount int }
+	var list []combo
+	if *combos != "" {
+		for _, tok := range strings.Split(*combos, ",") {
+			var dp, dl, pc int
+			if _, err := fmt.Sscanf(strings.TrimSpace(tok), "%d:%d:%d", &dp, &dl, &pc); err != nil {
+				fmt.Fprintf(os.Stderr, "[warn] 조합 파싱 실패: %s\n", tok)
+				continue
+			}
+			list = append(list, combo{dp, dl, pc})
+		}
+	} else {
+		pc := len(strings.Split(*logPFlag, ","))
+		list = append(list, combo{13, 40, pc})
+	}
+
+	for _, cb := range list {
+		runOne(*logNf, *q0f, cb.depth, cb.delta, cb.pcount, *reps)
+	}
+}
+
+func runOne(logN, q0, depth, delta, pcount, reps int) {
 	logQ := []int{q0}
 	for i := 0; i < depth; i++ {
 		logQ = append(logQ, delta)
 	}
-	var logP []int
-	for _, f := range strings.Split(*logPFlag, ",") {
-		v, err := strconv.Atoi(strings.TrimSpace(f))
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "bad -logp: %v\n", err)
-			os.Exit(1)
-		}
-		logP = append(logP, v)
+	logP := make([]int, pcount)
+	for i := range logP {
+		logP[i] = 60
 	}
 
 	params, err := ckks.NewParametersFromLiteral(ckks.ParametersLiteral{
 		LogN: logN, LogQ: logQ, LogP: logP, LogDefaultScale: delta,
 	})
 	if err != nil {
-		panic(err)
+		fmt.Fprintf(os.Stderr, "[skip] depth=%d Δ=%d PCount=%d: %v\n", depth, delta, pcount, err)
+		return
 	}
 	maxLevel := params.MaxLevel()
 	slots := params.MaxSlots()
@@ -124,9 +145,7 @@ func main() {
 		wantRot[i] = x[(i+1)%slots]
 	}
 
-	fmt.Println("library,logN,q0,delta,depth,dnum,PCount,logP,maxDigitBits,level,path,rep,bits")
-
-	for rep := 0; rep < *reps; rep++ {
+	for rep := 0; rep < reps; rep++ {
 		kgen := ckks.NewKeyGenerator(params)
 		sk := kgen.GenSecretKeyNew()
 		galEl := params.GaloisElementForRotation(1)
