@@ -76,6 +76,8 @@ int main(int argc, char** argv)
         else if (a == "-combos" && i + 1 < argc) { spec = argv[++i]; expSel = 6; }
         // -mainrun "logN:depth:delta:dnum" → 레벨 전수 · 8-op · 정밀도 (임의 프리셋 본측정)
         else if (a == "-mainrun" && i + 1 < argc) { spec = argv[++i]; expSel = 7; }
+        // -hexlrun "logN:depth:delta:dnum" → HEXL 아암 최소 규모 (exp 8)
+        else if (a == "-hexlrun" && i + 1 < argc) { spec = argv[++i]; expSel = 8; }
         else if (a == "-threads" && i + 1 < argc) thlabel = argv[++i];
     }
 
@@ -109,6 +111,17 @@ int main(int argc, char** argv)
         cfgs.push_back({5, 15, 60, 42, 12, 3u});
         for (int L = 12; L >= 1; L--) levels.push_back(L);
         ops = {"add_cc", "add_cp", "mul_cp", "mul_cc", "mul_cc_rlk", "relin", "rescale", "rot1"};
+    } else if (expSel == 8) {
+        // HEXL 아암(2026-08-02). OFF baseline 과 **다른 질문**에 답하는 별도 측정이라
+        // 전수 스윕을 하지 않는다 — 배수만 본다.
+        //   레벨 3점(maxLevel / 중간 / L1) × heavy 3종. 정밀도는 maxLevel 만.
+        // 타이밍·정밀도 코드 경로는 exp 5/7 과 완전히 동일하다(measure() 를 그대로 쓴다).
+        int ln = 0, dp = 0, dl = 0; unsigned dn = 0;
+        if (sscanf(spec.c_str(), "%d:%d:%d:%u", &ln, &dp, &dl, &dn) != 4) {
+            std::cerr << "-hexlrun 파싱 실패: " << spec << "\n"; return 2;
+        }
+        cfgs.push_back({8, ln, 60, dl, dp, dn});
+        ops = {"mul_cc_rlk", "relin", "rot1"};
     } else if (expSel == 7) {
         int ln = 0, dp = 0, dl = 0; unsigned dn = 0;
         if (sscanf(spec.c_str(), "%d:%d:%d:%u", &ln, &dp, &dl, &dn) != 4) {
@@ -144,7 +157,7 @@ int main(int argc, char** argv)
     csv << "library,exp,logN,q0,delta,depth,dnum,PCount,logP,logQ,logQP,bound,margin,"
            "maxLevel,level,op,mean_us,std_us,reps,digits,threads,nthreads,ok,err\n";
     csv << std::fixed;
-    const bool wantPrec = (expSel == 1 || expSel == 3 || expSel == 5 || expSel == 7);
+    const bool wantPrec = (expSel == 1 || expSel == 3 || expSel == 5 || expSel == 7 || expSel == 8);
     if (wantPrec) {
         pcsv.open(precout);
         pcsv << "library,exp,logN,q0,delta,depth,dnum,PCount,logP,maxDigitBits,level,path,rep,bits\n";
@@ -222,6 +235,7 @@ int main(int argc, char** argv)
         std::vector<int> lv = levels;
         if (c.exp == 6) lv = {c.depth};
         else if (c.exp == 7) { lv.clear(); for (int L = c.depth; L >= 1; L--) lv.push_back(L); }
+        else if (c.exp == 8) lv = {c.depth, c.depth / 2, 1};
         for (int L : lv) {
             const uint32_t g = (uint32_t)(c.depth - L);
             Plaintext pt = cc->MakeCKKSPackedPlaintext(vec, 1, g);
@@ -274,6 +288,9 @@ int main(int argc, char** argv)
         //   내려가면 누적 노이즈가 섞여 "그 레벨의 KS 손실"이 아니게 된다.
         //   레벨 진입은 스케일 불변 drop(LevelReduce) — ModReduce를 쓰면 스케일까지 나뉜다.
         if (wantPrec) {
+            // exp 8(HEXL 아암)은 정밀도를 maxLevel 한 점만 본다 — HEXL 이 연산 순서를 바꿔
+            // 정밀도가 흔들리는지 확인하는 것이 목적이고, 그 확인에는 한 점이면 족하다.
+            std::vector<int> plv = (c.exp == 8) ? std::vector<int>{c.depth} : lv;
             std::vector<double> x, y;
             precision_common::make_inputs(slots, x, y);
             std::vector<double> want_rot(slots);
@@ -285,7 +302,7 @@ int main(int argc, char** argv)
                     Plaintext r; cc->Decrypt(pk2.secretKey, z, &r); r->SetLength(slots);
                     return r->GetRealPackedValue();
                 };
-                for (int L : lv) {
+                for (int L : plv) {
                     const uint32_t gp = (uint32_t)(c.depth - L);
                     Plaintext ptx = cc->MakeCKKSPackedPlaintext(x, 1, 0);
                     auto ct = cc->Encrypt(pk2.secretKey, ptx);   // ★ 비밀키 암호화, 레벨마다 새로

@@ -66,6 +66,8 @@ int main(int argc, char** argv)
         else if (a == "-out" && i + 1 < argc) out = argv[++i];
         else if (a == "-precout" && i + 1 < argc) precout = argv[++i];
         else if (a == "-mainrun" && i + 1 < argc) { spec = argv[++i]; expSel = 7; }
+        // -hexlrun "logN:depth:delta" → HEXL 아암 최소 규모 (exp 8)
+        else if (a == "-hexlrun" && i + 1 < argc) { spec = argv[++i]; expSel = 8; }
         else if (a == "-threads" && i + 1 < argc) thlabel = argv[++i];
     }
 
@@ -82,6 +84,17 @@ int main(int argc, char** argv)
         for (int d = 40; d <= 50; d++) deltas.push_back(d);
         levels = {13};
         ops = {"add_cc", "add_cp", "mul_cp", "mul_cc", "mul_cc_rlk", "relin", "rescale", "rot1"};
+    } else if (expSel == 8) {
+        // HEXL 아암(2026-08-02). OFF baseline 과 다른 질문에 답하는 별도 측정 →
+        // 전수 스윕 없이 레벨 3점(maxLevel / 중간 / L1) × heavy 3종만 본다.
+        // 정밀도는 maxLevel 한 점. 측정 코드 경로는 exp 5/7 과 동일하다.
+        int ln = 0, dp = 0, dl = 0;
+        if (sscanf(spec.c_str(), "%d:%d:%d", &ln, &dp, &dl) != 3) {
+            cerr << "-hexlrun 파싱 실패: " << spec << "\n"; return 2;
+        }
+        logN = ln; depth = dp; deltas = {dl};
+        levels = {depth, depth / 2, 1};
+        ops = {"mul_cc_rlk", "relin", "rot1"};
     } else if (expSel == 7) {
         int ln = 0, dp = 0, dl = 0;
         if (sscanf(spec.c_str(), "%d:%d:%d", &ln, &dp, &dl) != 3) {
@@ -110,7 +123,7 @@ int main(int argc, char** argv)
     csv << "library,exp,logN,q0,delta,depth,dnum,PCount,logP,logQ,logQP,bound,margin,"
            "maxLevel,level,op,mean_us,std_us,reps,digits,threads,nthreads,ok,err\n";
     csv << fixed;
-    const bool wantPrec = (expSel == 1 || expSel == 3 || expSel == 5 || expSel == 7);
+    const bool wantPrec = (expSel == 1 || expSel == 3 || expSel == 5 || expSel == 7 || expSel == 8);
     if (wantPrec) {
         pcsv.open(precout);
         pcsv << "library,exp,logN,q0,delta,depth,dnum,PCount,logP,maxDigitBits,level,path,rep,bits\n";
@@ -231,7 +244,8 @@ int main(int argc, char** argv)
                     Plaintext r; dec2.decrypt(z, r);
                     vector<double> v; encoder.decode(r, v); v.resize(slots); return v;
                 };
-                for (int L : levels) {
+                // exp 8(HEXL 아암)은 정밀도를 maxLevel 한 점만 본다.
+                for (int L : (expSel == 8 ? vector<int>{depth} : levels)) {
                     auto cdp = ctx.first_context_data();
                     while (cdp->chain_index() > size_t(L)) cdp = cdp->next_context_data();
                     Plaintext ptx; encoder.encode(x, scale, ptx);

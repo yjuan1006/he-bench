@@ -26,6 +26,15 @@ if(BENCH_OPENFHE)
         message(FATAL_ERROR "PACKAGE OpenFHE NOT FOUND")
     endif()
 
+    # 2026-08-02 HEXL 아암: HEXL 로 빌드된 OpenFHE 설치본은 OpenFHE_SHARED_LIBRARIES 에
+    # IMPORTED 타깃 HEXL::hexl 을 끼워 넣는다. 그 타깃은 find_package(HEXL) 이 있어야
+    # 정의되므로 여기서 먼저 찾는다. baseline 설치본은 OpenFHE_WITH_INTEL_HEXL 이 비어
+    # 있어 이 블록을 통째로 건너뛴다 → 기존 빌드 동작 불변.
+    if(OpenFHE_WITH_INTEL_HEXL)
+        find_package(HEXL REQUIRED HINTS "${OpenFHE_INTEL_HEXL_HINT_DIR}")
+        message(STATUS "OpenFHE built WITH Intel HEXL -> HEXL ${HEXL_VERSION} (별도 아암, _hexl 태그 필수)")
+    endif()
+
     # OpenFHE 권장 플래그를 쓰되 -Werror는 제거 (벤치 코드 경고로 빌드 실패 방지).
     string(REPLACE "-Werror" "" OPENFHE_BENCH_CXX_FLAGS "${OpenFHE_CXX_FLAGS}")
     separate_arguments(OPENFHE_BENCH_CXX_FLAGS_LIST UNIX_COMMAND "${OPENFHE_BENCH_CXX_FLAGS}")
@@ -109,11 +118,15 @@ endif()
 # dku16c는 AVX-512가 있어 HEXL을 켜면 SEAL만 부당하게 유리해진다.
 if(BENCH_SEAL)
     find_package(SEAL 4.3 REQUIRED)
-    if(SEAL_USE_INTEL_HEXL)
+    # 2026-08-02: HEXL 아암을 별도로 재려고 통로를 하나 냈다. 기본값은 OFF 이므로
+    # baseline 빌드의 동작은 전과 완전히 동일하다 — 실수로 HEXL SEAL 을 물면 여전히 멈춘다.
+    # 이 통로를 열고 나온 산출물은 반드시 _hexl 태그를 달고 baseline 과 섞지 않는다.
+    if(SEAL_USE_INTEL_HEXL AND NOT BENCH_ALLOW_HEXL)
         message(FATAL_ERROR
             "Installed SEAL was built with Intel HEXL ON. "
             "Baseline requires HEXL OFF (docs/PROJECT_CONTEXT.md §2). Rebuild SEAL with "
-            "-DSEAL_USE_INTEL_HEXL=OFF, or tag the outputs with _hexl and keep them separate.")
+            "-DSEAL_USE_INTEL_HEXL=OFF, or tag the outputs with _hexl and keep them separate "
+            "(then configure with -DBENCH_ALLOW_HEXL=ON).")
     endif()
 
     # SEAL은 BUILD_SHARED_LIBS=ON으로 빌드하면 SEAL::seal_shared를, 정적이면 SEAL::seal을
