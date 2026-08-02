@@ -45,47 +45,117 @@ plots/8op/    새 실행의 집계 산출물이 쌓이는 곳 (v1 산출물을 �
 
 ### 결과 파일 규칙
 
-`results_{lib}_{preset}_{1t|mt}_{machine}.csv` — `lib`∈{openfhe,lattigo,**seal**}, `preset`∈{small,medium,large}.
-새 측정본은 리포 **루트**에 떨어지고(드라이버의 `-out`), 확정되면 아카이브로 옮긴다.
-v1 dku16c는 **18개**(3 lib × 3 preset × {1t,mt}) + 진단본 2 + 잔여 1 = `archive/v1/results/` 에 25개.
-- `mt` = 멀티스레드(기본): OpenFHE 기본 OpenMP / Lattigo 기본
+**v3 (현행)** — `results_{preset-id}_{timing|precision}_{1t|mt}_{machine}.csv`.
+한 파일에 세 라이브러리가 함께 들어가고, P 메타데이터(dnum/PCount/logP/logQP/여유/레벨별 digit)와
+`threads`/`nthreads`(런타임 실측)가 열로 붙는다.
+
+| preset-id | logN | depth | Δ |
+|---|---:|---:|---:|
+| `v3n15d42L12` (A) | 15 | 12 | 42 |
+| `v3Bn14d42L6` (B) | 14 | 6 | 42 |
+| `v3Cn15d48L10` (C) | 15 | 10 | 48 |
+| `v3Dn14d42L4` (D) | 14 | 4 | 42 |
+
+`results_v2n15d40L13_*`는 **폐기된 v2**이나 대조군으로 보존한다(정밀도 20% 하한 미달,
+Lattigo 보안 여유 1비트 — `docs/PROJECT_CONTEXT.md §8.1`).
+
+⚠️ v3 CSV는 **`aggregate.py`에 넣을 수 없다.** 스키마가 다르고 `preset` 어휘도 v1의
+{small,medium,large}가 아니다. `aggregate.py`의 preset 게이트가 거부하는 것은 **의도된 동작**
+(v1/v2/v3 혼입 방지)이며, v3 집계는 `scripts/v3_gate_table.py <preset-id>`를 쓴다.
+
+**v1 (아카이브)** — `results_{lib}_{preset}_{1t|mt}_{machine}.csv`, `preset`∈{small,medium,large}.
+`archive/v1/results/` 에 25개(본측정 18 + 진단 2 + 병합·요약 4 + 잔여 1).
+- `mt` = 멀티스레드: OpenFHE 기본 OpenMP / Lattigo 기본
 - `1t` = 싱글스레드: OpenFHE `OMP_NUM_THREADS=1` / Lattigo `GOMAXPROCS=1`
   (Go에는 `OMP_NUM_THREADS`가 무효이므로 반드시 `GOMAXPROCS=1`)
 - **Lattigo·SEAL은 단건 연산 내부를 병렬화하지 않아 `mt ≈ 1t`다**(실측 mt/1t = 0.99~1.01).
   실제로 병렬화되는 것은 OpenFHE뿐(mt/1t = 0.80/0.47/0.37).
 
-집계는 스레드 모드별로 분리한다(스키마에 스레드 컬럼이 없어 mt/1t를 한 파일에 합치면 충돌):
+v1 집계는 스레드 모드별로 분리한다(v1 스키마에는 스레드 컬럼이 없어 한 파일에 합치면 충돌):
 `python3 scripts/aggregate.py --lattigo <...> --openfhe <...> --seal <...> --suffix _MODE_dku16c`.
-출력은 `plots/8op/` 에 쌓인다(구 프리셋 산출물은 `archive/v1/` 로 옮겨져 비어 있다).
-`--seal`도 `--openfhe`와 같은 입력 가드가 걸려 있다(지정 누락 시 조용히 2자로 진행하지 않고 중단).
+출력은 `plots/8op/` 에 쌓인다. `--seal`도 `--openfhe`와 같은 입력 가드가 걸려 있다.
+**v3에는 쓰지 않는다** — 위의 preset 게이트 참조.
 
-## 실행 방법
+## 실행 방법 (v3)
 
-18개 CSV 전체는 드라이버로 돌린다(프리셋마다 자동 커밋):
+프리셋별 드라이버로 돌린다. 각 실행은 `run_warm.sh`(코어 고정 + 30초 가열 + 전후 프로브)를 거친다.
 
 ```bash
-./scripts/run_all_dku16c.sh   # 3 lib × 3 preset × {1t,mt} = 18 CSV
+./scripts/run_main_v3.sh    # A: 1t (타이밍+정밀도)
+./scripts/run_main_bc.sh    # B·C: 1t
+./scripts/run_main_D.sh     # D: 1t + mt
+./scripts/run_main_mt.sh    # A·B·C: mt
 ```
 
-개별 실행은 반드시 **코어 고정 + 사전 가열 래퍼**를 거친다(아래 측정 프로토콜 참조):
+임의 프리셋은 `-mainrun "logN:depth:delta:x"`로 돌린다(x = OpenFHE dnum / Lattigo PCount, SEAL은 생략):
 
 ```bash
-# <고정코어> <가열스레드> <가열초> <프로브경로> -- 실행할 명령
+# 1t — 코어 12 단일 고정
+OMP_NUM_THREADS=1 PROBE_CORE=12 ./scripts/run_warm.sh 12 1 30 /tmp/pr/of \
+  ./build_openfhe/presetsearch_openfhe -mainrun "15:12:42:3" -threads 1t \
+  -reps 30 -warmup 3 -precreps 12 -out OUT.csv -precout PREC.csv
+
+# mt — OpenFHE 만 전 코어 + 전 코어 가열. ⚠️ 타이밍과 정밀도를 분리 실행할 것
+OMP_NUM_THREADS=16 PROBE_CORE=12 ./scripts/run_warm.sh 0-15 16 30 /tmp/pr/of_mt \
+  ./build_openfhe/presetsearch_openfhe -mainrun "15:12:42:3" -threads mt \
+  -reps 30 -warmup 3 -precreps 0 -out OUT_mt.csv -precout /dev/null
+
+# mt — Lattigo·SEAL 은 내부 병렬화가 없어 코어 12 단일 고정 유지
+GOMAXPROCS=16 PROBE_CORE=12 ./scripts/run_warm.sh 12 1 30 /tmp/pr/la_mt \
+  ./presetsearch_lattigo -mainrun "15:12:42:5" -threads mt -reps 30 -warmup 3 -precreps 0 -out OUT_mt.csv
+
+python3 scripts/probe_check.py /tmp/pr/of   # 측정 전/후 클럭이 fast 밴드였는지 확인
+```
+
+집계·게이트:
+
+```bash
+python3 scripts/v3_gate_table.py v3n15d42L12    # physics_gate + op×level 표 + 교차점 + 정밀도
+```
+
+파라미터만 확인할 때는 벤치 없이 격자 덤프를 쓴다(초 단위):
+
+```bash
+./build_openfhe/param_dump_openfhe -mode grid -logN 15 -q0 60 \
+  -depth-min 9 -depth-max 13 -delta-min 40 -delta-max 60 -logq-min 540 -logq-max 610 -out G.csv
+go run src/param_dump_lattigo_grid.go -logN 15 -q0 60 -depth-min 8 -depth-max 11 -pcount-max 5 -out GL.csv
+./build_seal/param_dump_seal_grid -logN 15 -q0 60 -depth-min 8 -depth-max 11 -out GS.csv
+```
+
+### v1 실행 방법 (이력 — `archive/v1/` 재현용)
+
+구 프리셋(small/medium/large) 측정에 쓰던 절차다. 드라이버·스크립트 모두 그대로 보존한다.
+
+```bash
+./scripts/run_all_dku16c.sh   # 3 lib × 3 preset × {1t,mt} = 18 CSV (프리셋마다 자동 커밋)
+
+# 개별 실행 — <고정코어> <가열스레드> <가열초> <프로브경로> -- 실행할 명령
 ./scripts/run_warm.sh 12 1 30 traces/of ./build_openfhe/openfhe_bench -preset large -reps 30 -out OUT.csv
 ./scripts/run_warm.sh 12 1 30 traces/la go run src/lattigo_bench.go   -preset large -reps 30 -out OUT.csv
 ./scripts/run_warm.sh 12 1 30 traces/se ./build_seal/seal_bench -preset large -reps 30 -warmup 3 -warmsec 0 \
                                 -machine dku16c -threads 1t -sweep desc -out OUT.csv
-python3 scripts/probe_check.py traces/of   # 측정 전/후 클럭이 fast 밴드였는지 확인
+python3 scripts/probe_check.py traces/of
 ```
+
+⚠️ v1 절차에는 `PROBE_CORE`가 없다(1t 전용이라 필요 없었다). mt 재현에는 v3 절차를 쓸 것.
 
 빌드: `cmake -S . -B build_openfhe -DCMAKE_PREFIX_PATH=/data/yja/openfhe-install`,
 `cmake -S . -B build_seal -DBENCH_OPENFHE=OFF -DBENCH_SEAL=ON -DCMAKE_PREFIX_PATH=$PWD/third_party/SEAL/install`.
 
-플래그: `-preset {small|medium|large|all}`, `-reps N`, `-warmup N`, `-out PATH`.
+플래그 — **v3** (`presetsearch_*`): `-mainrun "logN:depth:delta:x"`, `-reps N`, `-warmup N`,
+`-precreps N`(0이면 정밀도 생략), `-threads {1t|mt}`(기록용 라벨), `-out`, `-precout`.
+`-combos "logN:depth:delta:x,..."`는 maxLevel 한 점만 heavy 3종으로 재는 최적 P 탐색 모드다.
+
+**v1** (`openfhe_bench` 등): `-preset {small|medium|large|all}`, `-reps N`, `-warmup N`, `-out PATH`.
 `seal_bench`는 추가로 `-sweep {asc|desc}`, `-warmsec N`(래퍼로 가열하므로 본측정은 **0**),
 `-machine`, `-threads`를 받는다.
 
 ## 프리셋
+
+### v1 프리셋 (아카이브 — `archive/v1/`)
+
+⚠️ **logQP를 통제하지 않아 `large`에서 OpenFHE가 128비트에 미달한다**(logQP 1035 > 상한 881).
+v3로 대체됐으며 근거는 `docs/PROJECT_CONTEXT.md §8.1`.
 
 | preset | logN | ring dim | maxLevel | scale bits |
 |--------|------|----------|----------|------------|
@@ -93,7 +163,21 @@ python3 scripts/probe_check.py traces/of   # 측정 전/후 클럭이 fast 밴�
 | medium | 14   | 16384    | 10       | 45         |
 | large  | 15   | 32768    | 15       | 45         |
 
+### v3 프리셋 (현행) — `q0 = 60` 공통
+
+| preset | logN | ring dim | maxLevel | Δ | logQ | tc128 상한 | OpenFHE logP/여유 | Lattigo logP/여유 | SEAL logP/여유 |
+|--------|-----:|---------:|---------:|---:|-----:|-----:|---:|---:|---:|
+| **A** | 15 | 32768 | 12 | 42 | 564 | 881 | 240 / +77 | 300 / +17 | 60 / +257 |
+| **B** | 14 | 16384 | 6 | 42 | 312 | 438 | 120 / **+6** | 120 / **+6** | 60 / +66 |
+| **C** | 15 | 32768 | 10 | 48 | 540 | 881 | 300 / +41 | 240 / +101 | 60 / +281 |
+| **D** | 14 | 16384 | 4 | 42 | 228 | 438 | 180 / +30 | 180 / +30 | 60 / +150 |
+
+축: **A↔B** 링 차원(Δ 42 동일), **B↔D** 깊이(Δ 42 동일), **A↔C** 깊이(⚠️ Δ 42 vs 48 교란).
+Q 체인만 통일하고 **P는 라이브러리별 최적을 쓴다** — "동일 P 비교"가 아니라
+"각자 최적 조건에서의 비교"다. 파라미터 정본은 `docs/PARAMS_dku16c.md §8`.
+
 각 프리셋에서 level = maxLevel..1 전수 스윕, 8개 op × warmup 3 + 30회 측정, μs 단위 평균/표본표준편차(n-1).
+정밀도(rot1, 비밀키)는 레벨 전수 12회. **판정은 평균이 아니라 최소값 ≥25비트**다.
 
 ## op 목록
 
@@ -126,6 +210,30 @@ turbo(3.7 GHz)에 도달하며 유휴 약 1초면 base로 되돌아간다(**비 
   1회씩 재어 기록한다(`scripts/probe_check.py`). 18개 실행 × 전후 36개 프로브 전부 fast 밴드(82.5~82.9 ms)였다.
 - 고정 코어: 단일스레드 실행은 **코어 12**, OpenFHE mt만 **전 코어(0–15) 고정 + 전 코어 가열**.
 - 수용 검사 통과 기준(asc/desc 방향 편향): small 0.62% · medium 0.55%, 상/하 비 1.00±0.01.
+
+### mt 측정 프로토콜 (v3)
+
+이 축은 **"단건 연산 내부 병렬화가 있는 라이브러리가 얼마나 이득을 보는가"** 이며,
+실질적으로 **OpenFHE만 참여한다**. Lattigo·SEAL의 `mt/1t ≈ 1`은 성능 열위가 아니라
+**설계상 이 축 밖**이라는 뜻이다. 독립 암호문을 코어에 분배하는 애플리케이션 수준
+병렬화는 별개 축이며 여기서 측정하지 않는다.
+
+| lib | 스레드 설정 | 코어 고정 | op 내부 병렬화 |
+|---|---|---|---|
+| OpenFHE | `OMP_NUM_THREADS=16` | **0–15 전체 + 16스레드 가열** | 있음 |
+| Lattigo | `GOMAXPROCS=16` | 코어 12 단일 | 없음 |
+| SEAL | — | 코어 12 단일 | 없음 |
+
+- **프로브는 `PROBE_CORE=12`로 고정한다.** 전 코어 집합에 풀어두면 `calib`이 유휴 코어로
+  이주해 base 클럭(138ms)을 기록한다 — 측정 오염이 아니라 프로브의 아티팩트다.
+- **타이밍과 정밀도를 분리 실행한다.** 한 프로세스에서 정밀도가 뒤에 오면 그 구간이
+  대부분 직렬이라 post 프로브가 식은 구간을 잰다.
+- **mt physics_gate는 `relin − mul_cc_rlk > 3σ`** 기준이다(1t의 비 1.02가 아니다).
+  레벨 단조성은 mt에서 게이트로 쓰지 않고 건수만 보고한다.
+- ⚠️ **Lattigo 경량 op(`add_cc`/`add_cp`/`mul_cp`/`mul_cc`)는 Go GC 때문에 이 프로토콜에서
+  안정적으로 측정되지 않는다** — 재현성 편차가 안정군의 10배다. 단조성 판정에서 제외한다.
+
+상세는 `docs/PROJECT_CONTEXT.md §8.6`.
 
 ## ⚠️ 측정 주의 (공정성)
 
