@@ -87,6 +87,14 @@ int main(int argc, char** argv)
         for (int dl = 40; dl <= 50; dl++) cfgs.push_back({2, 15, 60, dl, 13, 7u});
         levels = {13};
         ops = {"add_cc", "add_cp", "mul_cp", "mul_cc", "mul_cc_rlk", "relin", "rescale", "rot1"};
+    } else if (expSel == 4) {
+        // P 선택 확인: depth 12 / Δ 42 에서 logP 240 을 내는 dnum 3 과 4 를 비교한다.
+        // depth 13 탐색에서는 dnum 3 이 ~20% 빨랐으나 depth 가 바뀌면 레벨별 digit 수열이
+        // 달라지므로 순서가 유지되는지 재확인이 필요하다.
+        cfgs.push_back({4, 15, 60, 42, 12, 3u});
+        cfgs.push_back({4, 15, 60, 42, 12, 4u});
+        levels = {12};
+        ops = {"mul_cc_rlk", "relin", "rot1"};
     } else {
         // 본측정: 탐색으로 확정된 프리셋. dnum 3 → PCount 4 / logP 240 / logQP 820.
         // (logP 300 = dnum 2 가 더 빠르지만 rot1 정밀도 23.31로 하한 25비트 미달.
@@ -100,7 +108,8 @@ int main(int argc, char** argv)
     csv << "library,exp,logN,q0,delta,depth,dnum,PCount,logP,logQ,logQP,bound,margin,"
            "maxLevel,level,op,mean_us,std_us,reps,digits,ok,err\n";
     csv << std::fixed;
-    if (expSel != 2) {
+    const bool wantPrec = (expSel == 1 || expSel == 3);
+    if (wantPrec) {
         pcsv.open(precout);
         pcsv << "library,exp,logN,q0,delta,depth,dnum,PCount,logP,maxDigitBits,level,path,rep,bits\n";
     }
@@ -225,7 +234,7 @@ int main(int argc, char** argv)
         // ★ 각 레벨에서 **새로 암호화**한 뒤 그 레벨로 내린다 — 암호문을 레벨을 따라 끌고
         //   내려가면 누적 노이즈가 섞여 "그 레벨의 KS 손실"이 아니게 된다.
         //   레벨 진입은 스케일 불변 drop(LevelReduce) — ModReduce를 쓰면 스케일까지 나뉜다.
-        if (expSel != 2) {
+        if (wantPrec) {
             std::vector<double> x, y;
             precision_common::make_inputs(slots, x, y);
             std::vector<double> want_rot(slots);
@@ -259,6 +268,6 @@ int main(int argc, char** argv)
     }
     csv.close();
     if (pcsv.is_open()) pcsv.close();
-    std::cerr << "wrote " << out << (expSel == 1 ? (" + " + precout) : "") << "\n";
+    std::cerr << "wrote " << out << (wantPrec ? (" + " + precout) : "") << "\n";
     return 0;
 }

@@ -112,7 +112,8 @@ func main() {
 	precout := flag.String("precout", "precision.csv", "정밀도 CSV")
 	flag.Parse()
 
-	const logN, q0, depth = 15, 60, 13
+	const logN, q0 = 15, 60
+	depth := 13
 
 	var cfgs []cfg
 	var levels []int
@@ -130,6 +131,15 @@ func main() {
 		}
 		levels = []int{13}
 		ops = []string{"add_cc", "add_cp", "mul_cp", "mul_cc", "mul_cc_rlk", "relin", "rescale", "rot1"}
+	} else if *expSel == 4 {
+		// P 선택 확인: depth 12 / Δ 42 에서 PCount 5/4/3 (logP 300/240/180) 비교.
+		// dnum 은 ceil(#Q/#P) 로 종속 결정되므로 각 PCount 에서 실제 값을 기록한다.
+		depth = 12
+		for _, pc := range []int{5, 4, 3} {
+			cfgs = append(cfgs, cfg{42, pc})
+		}
+		levels = []int{12}
+		ops = []string{"mul_cc_rlk", "relin", "rot1"}
 	} else {
 		// 본측정: 확정 프리셋. PCount 5 → logP 300, dnum 3 (종속), logQP 880.
 		cfgs = append(cfgs, cfg{40, 5})
@@ -147,7 +157,8 @@ func main() {
 	fmt.Fprintln(fo, "library,exp,logN,q0,delta,depth,dnum,PCount,logP,logQ,logQP,bound,margin,"+
 		"maxLevel,level,op,mean_us,std_us,reps,digits,ok,err")
 	var fp *os.File
-	if *expSel != 2 {
+	wantPrec := *expSel == 1 || *expSel == 3
+	if wantPrec {
 		fp, err = os.Create(*precout)
 		if err != nil {
 			panic(err)
@@ -302,7 +313,7 @@ func main() {
 
 		// ---- 정밀도 : 타이밍이 끝난 뒤, 비밀키 암호화 ----
 		// ★ 각 레벨에서 새로 암호화한 뒤 DropLevel 로 진입 — 끌고 내려가면 누적 노이즈가 섞인다.
-		if *expSel != 2 {
+		if wantPrec {
 			x, _ := makeInputs(slots)
 			wantRot := make([]float64, slots)
 			for i := 0; i < slots; i++ {
