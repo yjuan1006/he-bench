@@ -81,11 +81,18 @@ int main(int argc, char** argv)
         for (uint32_t d : {2u, 3u, 4u, 5u, 7u, 14u}) cfgs.push_back({1, 15, 60, 40, 13, d});
         levels = {13, 7, 1};
         ops = {"mul_cc", "mul_cc_rlk", "relin", "rot1"};
-    } else {
+    } else if (expSel == 2) {
         // logP 를 120으로 고정해야 Δ의 순수 효과가 보인다. dnum=7 이면 digit0 = q0+Δ ∈ [100,110]
         // → ceil(digit/60) = 2 → logP 120 이 Δ 40..50 전 구간에서 성립한다(실측으로 재확인).
         for (int dl = 40; dl <= 50; dl++) cfgs.push_back({2, 15, 60, dl, 13, 7u});
         levels = {13};
+        ops = {"add_cc", "add_cp", "mul_cp", "mul_cc", "mul_cc_rlk", "relin", "rescale", "rot1"};
+    } else {
+        // 본측정: 탐색으로 확정된 프리셋. dnum 3 → PCount 4 / logP 240 / logQP 820.
+        // (logP 300 = dnum 2 가 더 빠르지만 rot1 정밀도 23.31로 하한 25비트 미달.
+        //  같은 logP 240 의 dnum 4 보다 dnum 3 이 maxLevel에서 ~20% 빠르다.)
+        cfgs.push_back({3, 15, 60, 40, 13, 3u});
+        for (int L = 13; L >= 1; L--) levels.push_back(L);
         ops = {"add_cc", "add_cp", "mul_cp", "mul_cc", "mul_cc_rlk", "relin", "rescale", "rot1"};
     }
 
@@ -93,7 +100,7 @@ int main(int argc, char** argv)
     csv << "library,exp,logN,q0,delta,depth,dnum,PCount,logP,logQ,logQP,bound,margin,"
            "maxLevel,level,op,mean_us,std_us,reps,digits,ok,err\n";
     csv << std::fixed;
-    if (expSel == 1) {
+    if (expSel != 2) {
         pcsv.open(precout);
         pcsv << "library,exp,logN,q0,delta,depth,dnum,PCount,logP,maxDigitBits,level,path,rep,bits\n";
     }
@@ -213,31 +220,39 @@ int main(int argc, char** argv)
             std::cerr << "  L=" << L << " done\n";
         }
 
-        // ---- 정밀도 (실험 1) : 타이밍이 끝난 뒤 ----
-        if (expSel == 1) {
+        // ---- 정밀도 : 타이밍이 끝난 뒤 ----
+        // 반복마다 키를 새로 만들고(비밀키·암호화 오차 표본이 산포의 원천), 그 안에서 레벨을 훑는다.
+        // ★ 각 레벨에서 **새로 암호화**한 뒤 그 레벨로 내린다 — 암호문을 레벨을 따라 끌고
+        //   내려가면 누적 노이즈가 섞여 "그 레벨의 KS 손실"이 아니게 된다.
+        //   레벨 진입은 스케일 불변 drop(LevelReduce) — ModReduce를 쓰면 스케일까지 나뉜다.
+        if (expSel != 2) {
             std::vector<double> x, y;
             precision_common::make_inputs(slots, x, y);
             std::vector<double> want_rot(slots);
             for (size_t i = 0; i < slots; i++) want_rot[i] = x[(i + 1) % slots];
             for (int rep = 0; rep < precreps; rep++) {
-                auto pk2 = cc->KeyGen();                     // 반복마다 키 재생성
+                auto pk2 = cc->KeyGen();
                 cc->EvalRotateKeyGen(pk2.secretKey, {1});
-                Plaintext ptx = cc->MakeCKKSPackedPlaintext(x, 1, 0);
-                auto ct = cc->Encrypt(pk2.secretKey, ptx);   // ★ 비밀키 암호화
                 auto dec = [&](const Ciphertext<DCRTPoly>& z) {
                     Plaintext r; cc->Decrypt(pk2.secretKey, z, &r); r->SetLength(slots);
                     return r->GetRealPackedValue();
                 };
-                auto prow = [&](const char* path, const std::vector<double>& got,
-                                const std::vector<double>& want) {
-                    pcsv << "openfhe," << c.exp << "," << c.logN << "," << c.q0 << "," << c.delta
-                         << "," << c.depth << "," << dnum << "," << pCount << "," << logP << ","
-                         << maxDigitBits << "," << c.depth << "," << path << "," << rep << ","
-                         << std::fixed << std::setprecision(4)
-                         << precision_common::precision_bits(got, want) << "\n";
-                };
-                prow("enc_dec", dec(ct), x);
-                prow("rot1", dec(cc->EvalRotate(ct, 1)), want_rot);
+                for (int L : levels) {
+                    const uint32_t gp = (uint32_t)(c.depth - L);
+                    Plaintext ptx = cc->MakeCKKSPackedPlaintext(x, 1, 0);
+                    auto ct = cc->Encrypt(pk2.secretKey, ptx);   // ★ 비밀키 암호화, 레벨마다 새로
+                    if (gp > 0) ct = cc->LevelReduce(ct, nullptr, gp);
+                    auto prow = [&](const char* path, const std::vector<double>& got,
+                                    const std::vector<double>& want) {
+                        pcsv << "openfhe," << c.exp << "," << c.logN << "," << c.q0 << "," << c.delta
+                             << "," << c.depth << "," << dnum << "," << pCount << "," << logP << ","
+                             << maxDigitBits << "," << L << "," << path << "," << rep << ","
+                             << std::fixed << std::setprecision(4)
+                             << precision_common::precision_bits(got, want) << "\n";
+                    };
+                    prow("enc_dec", dec(ct), x);
+                    prow("rot1", dec(cc->EvalRotate(ct, 1)), want_rot);
+                }
                 pcsv.flush();
             }
         }

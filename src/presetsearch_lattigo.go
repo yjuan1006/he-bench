@@ -123,12 +123,19 @@ func main() {
 		}
 		levels = []int{13, 7, 1}
 		ops = []string{"mul_cc", "mul_cc_rlk", "relin", "rot1"}
-	} else {
+	} else if *expSel == 2 {
 		// logP 120 고정 = PCount 2 (dnum은 ceil(14/2)=7 로 종속 결정)
 		for d := 40; d <= 50; d++ {
 			cfgs = append(cfgs, cfg{d, 2})
 		}
 		levels = []int{13}
+		ops = []string{"add_cc", "add_cp", "mul_cp", "mul_cc", "mul_cc_rlk", "relin", "rescale", "rot1"}
+	} else {
+		// 본측정: 확정 프리셋. PCount 5 → logP 300, dnum 3 (종속), logQP 880.
+		cfgs = append(cfgs, cfg{40, 5})
+		for L := depth; L >= 1; L-- {
+			levels = append(levels, L)
+		}
 		ops = []string{"add_cc", "add_cp", "mul_cp", "mul_cc", "mul_cc_rlk", "relin", "rescale", "rot1"}
 	}
 
@@ -140,7 +147,7 @@ func main() {
 	fmt.Fprintln(fo, "library,exp,logN,q0,delta,depth,dnum,PCount,logP,logQ,logQP,bound,margin,"+
 		"maxLevel,level,op,mean_us,std_us,reps,digits,ok,err")
 	var fp *os.File
-	if *expSel == 1 {
+	if *expSel != 2 {
 		fp, err = os.Create(*precout)
 		if err != nil {
 			panic(err)
@@ -293,8 +300,9 @@ func main() {
 			fmt.Fprintf(os.Stderr, "  L=%d done\n", L)
 		}
 
-		// ---- 정밀도 (실험 1) : 타이밍이 끝난 뒤, 비밀키 암호화 ----
-		if *expSel == 1 {
+		// ---- 정밀도 : 타이밍이 끝난 뒤, 비밀키 암호화 ----
+		// ★ 각 레벨에서 새로 암호화한 뒤 DropLevel 로 진입 — 끌고 내려가면 누적 노이즈가 섞인다.
+		if *expSel != 2 {
 			x, _ := makeInputs(slots)
 			wantRot := make([]float64, slots)
 			for i := 0; i < slots; i++ {
@@ -316,25 +324,30 @@ func main() {
 					}
 					return v
 				}
-				prow := func(path string, got, want []float64) {
+				prow := func(L int, path string, got, want []float64) {
 					fmt.Fprintf(fp, "lattigo,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s,%d,%.4f\n",
 						*expSel, logN, q0, c.delta, depth, dnum, len(pm), sumP, maxDigit,
-						maxLevel, path, rep, precisionBits(got, want))
+						L, path, rep, precisionBits(got, want))
 				}
-				ptx := ckks.NewPlaintext(params, maxLevel)
-				if err := ecd.Encode(x, ptx); err != nil {
-					panic(err)
+				for _, L := range levels {
+					ptx := ckks.NewPlaintext(params, maxLevel)
+					if err := ecd.Encode(x, ptx); err != nil {
+						panic(err)
+					}
+					ct, err := enc2.EncryptNew(ptx) // 레벨마다 새로 암호화
+					if err != nil {
+						panic(err)
+					}
+					if d := maxLevel - L; d > 0 {
+						ev2.DropLevel(ct, d) // 스케일 불변 drop
+					}
+					prow(L, "enc_dec", decode(ct), x)
+					cr, err := ev2.RotateNew(ct, 1)
+					if err != nil {
+						panic(err)
+					}
+					prow(L, "rot1", decode(cr), wantRot)
 				}
-				ct, err := enc2.EncryptNew(ptx)
-				if err != nil {
-					panic(err)
-				}
-				prow("enc_dec", decode(ct), x)
-				cr, err := ev2.RotateNew(ct, 1)
-				if err != nil {
-					panic(err)
-				}
-				prow("rot1", decode(cr), wantRot)
 				fp.Sync()
 			}
 		}

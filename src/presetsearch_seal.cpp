@@ -75,9 +75,14 @@ int main(int argc, char** argv)
         deltas = {40};                       // SEAL은 P 선택지가 없어 1점
         levels = {13, 7, 1};
         ops = {"mul_cc", "mul_cc_rlk", "relin", "rot1"};
-    } else {
+    } else if (expSel == 2) {
         for (int d = 40; d <= 50; d++) deltas.push_back(d);
         levels = {13};
+        ops = {"add_cc", "add_cp", "mul_cp", "mul_cc", "mul_cc_rlk", "relin", "rescale", "rot1"};
+    } else {
+        // 본측정: 확정 프리셋. SEAL은 P가 구조상 60 고정이라 선택 여지가 없다.
+        deltas = {40};
+        for (int L = depth; L >= 1; L--) levels.push_back(L);
         ops = {"add_cc", "add_cp", "mul_cp", "mul_cc", "mul_cc_rlk", "relin", "rescale", "rot1"};
     }
 
@@ -85,7 +90,7 @@ int main(int argc, char** argv)
     csv << "library,exp,logN,q0,delta,depth,dnum,PCount,logP,logQ,logQP,bound,margin,"
            "maxLevel,level,op,mean_us,std_us,reps,digits,ok,err\n";
     csv << fixed;
-    if (expSel == 1) {
+    if (expSel != 2) {
         pcsv.open(precout);
         pcsv << "library,exp,logN,q0,delta,depth,dnum,PCount,logP,maxDigitBits,level,path,rep,bits\n";
     }
@@ -186,8 +191,10 @@ int main(int argc, char** argv)
             cerr << "  L=" << L << " done\n";
         }
 
-        // ---- 정밀도 (실험 1) : 타이밍이 끝난 뒤, 비밀키 암호화 ----
-        if (expSel == 1) {
+        // ---- 정밀도 : 타이밍이 끝난 뒤, 비밀키 암호화 ----
+        // ★ 각 레벨에서 새로 암호화한 뒤 mod_switch 로 그 레벨에 진입한다 —
+        //   암호문을 레벨 따라 끌고 내려가면 누적 노이즈가 섞인다.
+        if (expSel != 2) {
             vector<double> x, y;
             precision_common::make_inputs(slots, x, y);
             vector<double> want_rot(slots);
@@ -199,22 +206,27 @@ int main(int argc, char** argv)
                 Encryptor enc2(ctx, sk2);
                 Decryptor dec2(ctx, sk2);
                 Evaluator ev2(ctx);
-                Plaintext ptx; encoder.encode(x, scale, ptx);
-                Ciphertext ct; enc2.encrypt_symmetric(ptx, ct);
                 auto dec = [&](const Ciphertext& z) {
                     Plaintext r; dec2.decrypt(z, r);
                     vector<double> v; encoder.decode(r, v); v.resize(slots); return v;
                 };
-                auto prow = [&](const char* path, const vector<double>& got, const vector<double>& want) {
-                    pcsv << "seal," << expSel << "," << logN << "," << q0 << "," << delta << ","
-                         << depth << "," << dnum << "," << pCount << "," << logP << ","
-                         << maxDigitBits << "," << depth << "," << path << "," << rep << ","
-                         << fixed << setprecision(4)
-                         << precision_common::precision_bits(got, want) << "\n";
-                };
-                prow("enc_dec", dec(ct), x);
-                Ciphertext crot; ev2.rotate_vector(ct, 1, g2, crot);
-                prow("rot1", dec(crot), want_rot);
+                for (int L : levels) {
+                    auto cdp = ctx.first_context_data();
+                    while (cdp->chain_index() > size_t(L)) cdp = cdp->next_context_data();
+                    Plaintext ptx; encoder.encode(x, scale, ptx);
+                    Ciphertext ct; enc2.encrypt_symmetric(ptx, ct);   // 레벨마다 새로 암호화
+                    ev2.mod_switch_to_inplace(ct, cdp->parms_id());
+                    auto prow = [&](const char* path, const vector<double>& got, const vector<double>& want) {
+                        pcsv << "seal," << expSel << "," << logN << "," << q0 << "," << delta << ","
+                             << depth << "," << dnum << "," << pCount << "," << logP << ","
+                             << maxDigitBits << "," << L << "," << path << "," << rep << ","
+                             << fixed << setprecision(4)
+                             << precision_common::precision_bits(got, want) << "\n";
+                    };
+                    prow("enc_dec", dec(ct), x);
+                    Ciphertext crot; ev2.rotate_vector(ct, 1, g2, crot);
+                    prow("rot1", dec(crot), want_rot);
+                }
                 pcsv.flush();
             }
         }
