@@ -95,6 +95,14 @@ int main(int argc, char** argv)
         cfgs.push_back({4, 15, 60, 42, 12, 4u});
         levels = {12};
         ops = {"mul_cc_rlk", "relin", "rot1"};
+    } else if (expSel == 5) {
+        // v3 본측정: logN15 q0 60 Δ42 depth12 (QCount 13, logQ 564).
+        // dnum 3 → PCount 4 / logP 240 / logQP 804 / 여유 77.
+        // dnum 4 도 같은 logP 240 을 내지만 digit 수열이 L12~L4 에서 더 많아 ~20% 느리다.
+        // dnum 2 는 logP 360 이 되어 logQP 924 로 상한을 43비트 초과한다(선택지 아님).
+        cfgs.push_back({5, 15, 60, 42, 12, 3u});
+        for (int L = 12; L >= 1; L--) levels.push_back(L);
+        ops = {"add_cc", "add_cp", "mul_cp", "mul_cc", "mul_cc_rlk", "relin", "rescale", "rot1"};
     } else {
         // 본측정: 탐색으로 확정된 프리셋. dnum 3 → PCount 4 / logP 240 / logQP 820.
         // (logP 300 = dnum 2 가 더 빠르지만 rot1 정밀도 23.31로 하한 25비트 미달.
@@ -108,7 +116,7 @@ int main(int argc, char** argv)
     csv << "library,exp,logN,q0,delta,depth,dnum,PCount,logP,logQ,logQP,bound,margin,"
            "maxLevel,level,op,mean_us,std_us,reps,digits,ok,err\n";
     csv << std::fixed;
-    const bool wantPrec = (expSel == 1 || expSel == 3);
+    const bool wantPrec = (expSel == 1 || expSel == 3 || expSel == 5);
     if (wantPrec) {
         pcsv.open(precout);
         pcsv << "library,exp,logN,q0,delta,depth,dnum,PCount,logP,maxDigitBits,level,path,rep,bits\n";

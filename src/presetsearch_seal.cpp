@@ -67,7 +67,8 @@ int main(int argc, char** argv)
         else if (a == "-precout" && i + 1 < argc) precout = argv[++i];
     }
 
-    const int logN = 15, q0 = 60, depth = 13, P_BITS = 60;
+    const int logN = 15, q0 = 60, P_BITS = 60;
+    int depth = 13;
     vector<int> deltas;
     vector<int> levels;
     vector<string> ops;
@@ -78,6 +79,12 @@ int main(int argc, char** argv)
     } else if (expSel == 2) {
         for (int d = 40; d <= 50; d++) deltas.push_back(d);
         levels = {13};
+        ops = {"add_cc", "add_cp", "mul_cp", "mul_cc", "mul_cc_rlk", "relin", "rescale", "rot1"};
+    } else if (expSel == 5) {
+        // v3 본측정: Δ42 depth12. SEAL 은 P 가 구조상 60 고정 (logQP 624, 여유 257).
+        depth = 12;
+        deltas = {42};
+        for (int L = depth; L >= 1; L--) levels.push_back(L);
         ops = {"add_cc", "add_cp", "mul_cp", "mul_cc", "mul_cc_rlk", "relin", "rescale", "rot1"};
     } else {
         // 본측정: 확정 프리셋. SEAL은 P가 구조상 60 고정이라 선택 여지가 없다.
@@ -90,7 +97,8 @@ int main(int argc, char** argv)
     csv << "library,exp,logN,q0,delta,depth,dnum,PCount,logP,logQ,logQP,bound,margin,"
            "maxLevel,level,op,mean_us,std_us,reps,digits,ok,err\n";
     csv << fixed;
-    if (expSel != 2) {
+    const bool wantPrec = (expSel == 1 || expSel == 3 || expSel == 5);
+    if (wantPrec) {
         pcsv.open(precout);
         pcsv << "library,exp,logN,q0,delta,depth,dnum,PCount,logP,maxDigitBits,level,path,rep,bits\n";
     }
@@ -194,7 +202,7 @@ int main(int argc, char** argv)
         // ---- 정밀도 : 타이밍이 끝난 뒤, 비밀키 암호화 ----
         // ★ 각 레벨에서 새로 암호화한 뒤 mod_switch 로 그 레벨에 진입한다 —
         //   암호문을 레벨 따라 끌고 내려가면 누적 노이즈가 섞인다.
-        if (expSel != 2) {
+        if (wantPrec) {
             vector<double> x, y;
             precision_common::make_inputs(slots, x, y);
             vector<double> want_rot(slots);

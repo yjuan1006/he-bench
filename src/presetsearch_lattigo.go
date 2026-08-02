@@ -140,6 +140,15 @@ func main() {
 		}
 		levels = []int{12}
 		ops = []string{"mul_cc_rlk", "relin", "rot1"}
+	} else if *expSel == 5 {
+		// v3 본측정: Δ42 depth12 (QCount 13). PCount 5 → logP 300, dnum 3(종속), logQP 864, 여유 17.
+		// QCount 13 에서도 ceil(13/5)=3 이라 depth13 과 같은 dnum 이 나온다.
+		depth = 12
+		cfgs = append(cfgs, cfg{42, 5})
+		for L := depth; L >= 1; L-- {
+			levels = append(levels, L)
+		}
+		ops = []string{"add_cc", "add_cp", "mul_cp", "mul_cc", "mul_cc_rlk", "relin", "rescale", "rot1"}
 	} else {
 		// 본측정: 확정 프리셋. PCount 5 → logP 300, dnum 3 (종속), logQP 880.
 		cfgs = append(cfgs, cfg{40, 5})
@@ -157,7 +166,7 @@ func main() {
 	fmt.Fprintln(fo, "library,exp,logN,q0,delta,depth,dnum,PCount,logP,logQ,logQP,bound,margin,"+
 		"maxLevel,level,op,mean_us,std_us,reps,digits,ok,err")
 	var fp *os.File
-	wantPrec := *expSel == 1 || *expSel == 3
+	wantPrec := *expSel == 1 || *expSel == 3 || *expSel == 5
 	if wantPrec {
 		fp, err = os.Create(*precout)
 		if err != nil {
