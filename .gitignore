@@ -23,6 +23,8 @@ openfhe_precision
 param_dump_openfhe
 ksprec_openfhe
 ksprec_seal
+presetsearch_openfhe
+presetsearch_seal
 seal_probe
 seal_align
 *.o

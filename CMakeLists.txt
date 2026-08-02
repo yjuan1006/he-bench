@@ -81,6 +81,24 @@ if(BENCH_OPENFHE)
         target_link_options(ksprec_openfhe PRIVATE -Wl,--no-as-needed)
     endif()
     target_link_libraries(ksprec_openfhe ${OpenFHE_SHARED_LIBRARIES})
+
+    # 프리셋 확정용 탐색 측정 (P 탐색 · Δ 스윕). 본측정 아님.
+    add_executable(presetsearch_openfhe src/presetsearch_openfhe.cpp)
+    target_compile_options(presetsearch_openfhe PRIVATE ${OPENFHE_BENCH_CXX_FLAGS_LIST})
+    target_include_directories(presetsearch_openfhe PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${OPENMP_INCLUDES}
+        ${OpenFHE_INCLUDE}
+        ${OpenFHE_INCLUDE}/third-party/include
+        ${OpenFHE_INCLUDE}/core
+        ${OpenFHE_INCLUDE}/pke
+        ${OpenFHE_INCLUDE}/binfhe)
+    target_link_directories(presetsearch_openfhe PRIVATE ${OpenFHE_LIBDIR} ${OPENMP_LIBRARIES})
+    target_link_options(presetsearch_openfhe PRIVATE ${OPENFHE_BENCH_CXX_FLAGS_LIST})
+    if(UNIX AND NOT APPLE)
+        target_link_options(presetsearch_openfhe PRIVATE -Wl,--no-as-needed)
+    endif()
+    target_link_libraries(presetsearch_openfhe ${OpenFHE_SHARED_LIBRARIES})
 endif()
 
 # --------------------------------------------------------------------------
@@ -122,4 +140,10 @@ if(BENCH_SEAL)
     target_compile_options(ksprec_seal PRIVATE -Wall -O3)
     target_include_directories(ksprec_seal PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
     target_link_libraries(ksprec_seal ${SEAL_TARGET})
+
+    # 프리셋 확정용 탐색 측정 (P 탐색 · Δ 스윕). 본측정 아님.
+    add_executable(presetsearch_seal src/presetsearch_seal.cpp)
+    target_compile_options(presetsearch_seal PRIVATE -Wall -O3)
+    target_include_directories(presetsearch_seal PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+    target_link_libraries(presetsearch_seal ${SEAL_TARGET})
 endif()
