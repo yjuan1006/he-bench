@@ -57,6 +57,8 @@ TIERS = {
 LINE_OPS = ["add_cc", "mul_cc", "mul_cc_rlk", "rescale", "rot1"]  # (구) 통합 레벨 그래프용 — 층 분리 후 미사용
 KEY_OPS = ["add_cc", "mul_cc", "mul_cc_rlk", "rot1", "rescale"]   # std 요약 대상 핵심 연산
 ALL_OPS = ["add_cc", "add_cp", "mul_cp", "mul_cc", "mul_cc_rlk", "relin", "rescale", "rot1"]
+# 프리셋 어휘. v1 기본값이며 --presets 로 덮어쓴다(v3 A/B/C/D 등).
+# 이 목록 밖의 preset 이 섞이면 스키마 게이트가 거부한다 — 조용한 혼입 방지.
 PRESET_ORDER = ["small", "medium", "large"]
 
 
@@ -109,6 +111,9 @@ def avail_hint(pattern):
 # 단위·의미가 근본적으로 다르므로(precision_bits는 μs가 아닌 비트, in_level/out_level 대 level)
 # 각각 aggregate_boot.py / aggregate_ks.py를 쓸 것. 아래 게이트가 혼입을 명시적으로 거부한다.
 REQUIRED_COLS = ["maxLevel", "level", "op"]
+# v3 CSV 가 실어 오는 P 메타데이터. 있으면 그대로 보존해 요약 CSV 로 흘려보낸다.
+# 없으면(v1) 조용히 건너뛴다 — v1 재현성을 깨지 않기 위해서다.
+P_META_COLS = ["dnum", "PCount", "logP", "logQP", "margin", "digits", "threads", "nthreads"]
 
 
 def read_bench_csv(path):
@@ -130,6 +135,47 @@ def read_bench_csv(path):
         sys.exit(f"[schema] {path}: 알 수 없는 preset {bad} — "
                  f"허용값 {PRESET_ORDER}. 부트스트래핑은 aggregate_boot.py, "
                  f"key-switch 단건은 aggregate_ks.py를 쓸 것.")
+    return df
+
+
+def load_combined(specs):
+    """v3 형식: 한 파일에 세 라이브러리가 함께 들어간다.
+
+    specs 는 "PRESET=경로" 목록. v3 CSV 에는 preset 열이 없으므로 라벨을 명시하게 한다
+    (파일명에서 유추하면 조용히 잘못 붙을 수 있다).
+    세 라이브러리가 다 있는지 확인한다 — v1 의 --openfhe/--seal 가드와 같은 원칙이다.
+    """
+    global LIB_ORDER
+    frames = []
+    for spec in specs:
+        if "=" not in spec:
+            sys.exit(f"[combined] '{spec}' — \"PRESET=경로\" 형식이어야 한다.")
+        name, path = spec.split("=", 1)
+        path = in_path(path)
+        if not os.path.exists(path):
+            sys.exit(f"[combined] {path} 없음.")
+        df = pd.read_csv(path, comment="#")
+        if "ok" in df.columns:
+            df = df[df["ok"] == 1].copy()
+        df["preset"] = name
+        missing = [c for c in REQUIRED_COLS if c not in df.columns]
+        if missing:
+            sys.exit(f"[schema] {path}: 필수 컬럼 없음 {missing}")
+        libs = set(df["library"].unique())
+        if libs != {"openfhe", "lattigo", "seal"}:
+            sys.exit(f"[combined] {path}: 라이브러리가 {sorted(libs)} 뿐이다. "
+                     f"조용히 반쪽으로 진행하지 않는다 — 세 라이브러리가 모두 있어야 한다.")
+        frames.append(df)
+    df = pd.concat(frames, ignore_index=True)
+    present = set(df["library"].unique())
+    LIB_ORDER = [lib for lib in LIB_ORDER if lib in present]
+    df["preset"] = pd.Categorical(df["preset"], PRESET_ORDER, ordered=True)
+    df["op"] = pd.Categorical(df["op"], ALL_OPS, ordered=True)
+    for col in ("preset", "op"):
+        n = int(df[col].isna().sum())
+        if n:
+            sys.exit(f"[schema] {col} 컬럼에 어휘 밖 값 — {n}행. 입력을 확인할 것.")
+    physics_gate(df)
     return df
 
 
@@ -208,6 +254,15 @@ FUSE_RATIO_TOL_1T = 1.02   # relin/mul_cc_rlk 상한. 정상 최대 0.982, 실�
 MONO_RATIO_TOL_1T = 1.02   # v[L]/v[L+1] 상한. 정상 최대 0.975
 SIGMA_K = 3.0              # mt는 비율이 무의미하므로 자체 분산으로 설명 안 되는 것만 위반
 
+# 단조성 판정에서 뺄 (라이브러리, op) 조합. --gc-exclude 로 설정한다.
+# 기본은 비어 있다 — v1 동작을 바꾸지 않는다.
+# 근거(PROJECT_CONTEXT §8.6): Lattigo 경량 op 는 Go GC 때문에 이 프로토콜에서
+# 안정적으로 측정되지 않는다. 동일 조건 재실행 2회의 |2차/1차−1| 최대값이
+#   GC 영향군 mul_cc .386/.227  mul_cp .386/.223  add_cc .371/.191  add_cp .370/.135
+#   안정군   rescale .044/.043  rot1 .016/.042  mul_cc_rlk .044/.041  relin .013/.038
+# 로 중간값 없이 갈린다. 위반이 실행마다 레벨을 옮겨다니고 교집합이 빈다.
+GC_EXCLUDE = set()         # {(library, op), ...}
+
 
 def physics_gate(df):
     """물리적으로 불가능한 값과 계측 실패 흔적을 잡는다. 위반 시 중단한다."""
@@ -243,20 +298,26 @@ def physics_gate(df):
 
     # G3. 1t 레벨 단조성 — 레벨이 낮을수록 빨라야 한다.
     #     작은 op는 CV가 0.3까지 가므로 σ 조건을 함께 걸어 오탐을 막는다.
+    info = []
     if THREAD_MODE == "1t":
         for (lib, preset, op), g in df.groupby(["library", "preset", "op"], observed=True):
             g = g.sort_values("level")
             v, sd, lv = g.mean_us.tolist(), g.std_us.tolist(), g.level.tolist()
             for i in range(len(v) - 1):
                 if v[i] > v[i + 1] * MONO_RATIO_TOL_1T and (v[i] - v[i + 1]) > 2 * (sd[i] + sd[i + 1]):
-                    viol.append(f"[단조성] {lib} {preset} {op} L{int(lv[i])}({v[i]:.1f}) > "
-                                f"L{int(lv[i+1])}({v[i+1]:.1f})")
+                    msg = (f"[단조성] {lib} {preset} {op} L{int(lv[i])}({v[i]:.1f}) > "
+                           f"L{int(lv[i+1])}({v[i+1]:.1f})")
+                    (info if (lib, op) in GC_EXCLUDE else viol).append(msg)
 
     if viol:
         sys.exit("[physics] 물리 정합 게이트 위반 — 통과시키지 않는다.\n  "
                  + "\n  ".join(viol)
                  + "\n\n  위반 행을 조사할 것. 재측정이 필요할 수 있다."
                  + "\n  (임계 근거는 aggregate.py 상단 FUSE_RATIO_TOL_1T 주석 참조)")
+    if info:
+        print(f"[physics] (참고) GC 영향군 단조성 이탈 {len(info)}건 — 판정에 쓰지 않는다:")
+        for x in info:
+            print("    " + x)
     print(f"[physics] 게이트 통과 ({len(df)}행, mode={THREAD_MODE})")
 
 
@@ -473,6 +534,9 @@ def std_summary(df):
     # (3) 전체 요약 CSV 저장 (cv 포함).
     outcsv = out_path(f"results_summary_std{SUFFIX}.csv")
     cols = ["preset", "level", "op", "library", "mean_us", "std_us", "cv"]
+    # v3 는 P 메타데이터를 함께 싣는다. v1 에는 없는 열이라 있는 것만 붙인다
+    # (없는 열을 강제로 넣으면 v1 산출물이 바이트 단위로 재현되지 않는다).
+    cols += [c for c in P_META_COLS if c in d.columns]
     d.sort_values(["preset", "level", "op", "library"])[cols].to_csv(outcsv, index=False)
     print(f"\n[summary] {outcsv}  ({len(d)} rows)")
 
@@ -491,6 +555,17 @@ def main():
     ap.add_argument("--openfhe", nargs="+", default=["results_openfhe.csv"])
     # SEAL도 동일 원칙: 기본값을 존재하지 않는 경로로 두어 사용자가 조건을 명시하게 한다.
     ap.add_argument("--seal", nargs="+", default=["results_seal.csv"])
+    # --- v3 결합 CSV 입력 ---
+    ap.add_argument("--combined", nargs="+", metavar="PRESET=CSV", default=None,
+                    help='v3 형식: 한 파일에 3사가 함께 든 CSV. "A=results_..._1t_dku16c.csv" 형태. '
+                         '지정 시 --lattigo/--openfhe/--seal 은 무시된다.')
+    ap.add_argument("--presets", default=None,
+                    help="preset 어휘를 쉼표로. 기본은 v1의 small,medium,large. "
+                         "--combined 사용 시 라벨에서 자동 유도된다.")
+    ap.add_argument("--gc-exclude", default="",
+                    help='단조성 판정에서 뺄 "lib:op,lib:op" 목록. '
+                         'v3 권장: "lattigo:add_cc,lattigo:add_cp,lattigo:mul_cp,lattigo:mul_cc" '
+                         "(Go GC 영향군 — PROJECT_CONTEXT §8.6)")
     ap.add_argument("--suffix", default="",
                     help="출력 파일명 접미사 (필수, 예: _mt / _1thread). "
                          "측정 조건을 파일명에 남기기 위한 것으로 생략할 수 없다.")
@@ -509,10 +584,22 @@ def main():
             "  예: --suffix _mt        (기본 멀티코어)\n"
             "      --suffix _1thread   (OMP_NUM_THREADS=1)")
     SUFFIX = args.suffix
-    global THREAD_MODE
+    global THREAD_MODE, PRESET_ORDER, GC_EXCLUDE
     THREAD_MODE = "mt" if "_mt" in args.suffix else "1t"
 
-    df = load(args.lattigo, args.openfhe, args.seal)
+    if args.gc_exclude:
+        GC_EXCLUDE = {tuple(x.split(":", 1)) for x in args.gc_exclude.split(",") if ":" in x}
+        print(f"[gate] 단조성 제외: {sorted(GC_EXCLUDE)}")
+
+    if args.combined:
+        # 라벨 순서를 그대로 preset 어휘로 쓴다(표·플롯 정렬 순서이기도 하다).
+        labels = [spec.split("=", 1)[0] for spec in args.combined if "=" in spec]
+        PRESET_ORDER = args.presets.split(",") if args.presets else labels
+        df = load_combined(args.combined)
+    else:
+        if args.presets:
+            PRESET_ORDER = args.presets.split(",")
+        df = load(args.lattigo, args.openfhe, args.seal)
     write_combined(df)
     console_summary(df)
     std_summary(df)

@@ -52,6 +52,99 @@ def crossings(num, den, op, maxlevel, scale=1.0):
     return out, r
 
 
+# ---------------------------------------------------------------------------
+# v3 모드 — 한 파일에 3사가 든 결합 CSV를 읽는다. 보간 방식은 v1과 동일하다.
+# ---------------------------------------------------------------------------
+V3 = {  # 라벨 → (파일 접두, depth)
+    "A": ("results_v3n15d42L12", 12),
+    "B": ("results_v3Bn14d42L6", 6),
+    "C": ("results_v3Cn15d48L10", 10),
+    "D": ("results_v3Dn14d42L4", 4),
+}
+HEAVY = ["mul_cc_rlk", "relin", "rot1"]
+PAIRS = [("seal", "openfhe"), ("seal", "lattigo"), ("openfhe", "lattigo")]
+# GC 영향군 — Lattigo 가 낀 쌍에서는 이 op 들을 판정하지 않는다(PROJECT_CONTEXT §8.6).
+GC_OPS = {"add_cc", "add_cp", "mul_cp", "mul_cc"}
+
+
+def load_v3(prefix, mode):
+    """{(library, op): {level: mean_us}} 로 읽는다."""
+    path = os.path.join(ROOT, f"{prefix}_timing_{mode}_dku16c.csv")
+    out = {}
+    with open(path) as fh:
+        for r in csv.DictReader(fh):
+            if r.get("ok") not in (None, "", "1"):
+                continue
+            out.setdefault((r["library"], r["op"]), {})[int(r["level"])] = float(r["mean_us"])
+    return out
+
+
+def crossings_v3(num, den, scale=1.0):
+    """v3 전용. 키가 {level: mean_us} 라 v1의 crossings()(키 (level, op))와 형식이 다르다.
+    보간 규칙은 완전히 동일하다 — (r[i]-1)(r[i+1]-1) < 0 인 구간에서 선형보간, 첫 교차를 취한다."""
+    xs = sorted(num)
+    r = [(num[l] * scale) / den[l] for l in xs]
+    out = [xs[i] + (1 - r[i]) / (r[i + 1] - r[i])
+           for i in range(len(r) - 1) if (r[i] - 1) * (r[i + 1] - 1) < 0]
+    return out, r
+
+
+def verdict(c, lo, hi, r, xs, a, b):
+    """판정 문자열 + 신뢰도 메모.
+
+    교차가 없을 때 '전 구간 느림'과 '관측 창 밖'을 구분한다 —
+    비가 1 아래에서 maxLevel 로 갈수록 커지고 있으면 더 깊은 레벨에서 교차할 뿐이다.
+    """
+    if bool(c) != bool(lo) or bool(c) != bool(hi):
+        return "±2% 안에서 갈림 → 판정 보류", ""
+    if c:
+        return "역전", ""
+    # 비가 1 아래인데 레벨이 오를수록 커지고 있으면, 교차가 없는 게 아니라
+    # **더 깊은 레벨에 있어 관측 창 밖**인 것이다. 둘을 구분해 표기한다.
+    # ⚠️ 마지막 두 점만 보면 국소 요동에 걸린다(B seal/openfhe 가 실제로 그랬다).
+    #    전 구간 추세(r[-1] > r[0])로 판정하고, 외삽은 뒤쪽 절반의 최소제곱 기울기로 한다.
+    if r[-1] < 1 and len(r) >= 3 and r[-1] > r[0]:
+        k = max(2, len(r) // 2)
+        ys, xx = r[-k:], xs[-k:]
+        mx = sum(xx) / k
+        my = sum(ys) / k
+        den = sum((x - mx) ** 2 for x in xx)
+        slope = sum((x - mx) * (y - my) for x, y in zip(xx, ys)) / den if den else 0
+        est = xs[-1] + (1 - r[-1]) / slope if slope > 0 else None
+        e = f" (외삽 L≈{est:.1f})" if est and est < xs[-1] + 25 else ""
+        return f"관측 창 밖 — depth {xs[-1]} < 교차 레벨{e}", ""
+    return f"전 구간 {a if r[0] > 1 else b} 느림", ""
+
+
+def main_v3(mode="1t"):
+    print(f"=== v3 교차점 ({mode}) — 첫 교차, 선형보간, ±{DRIFT:.0%} 감도 ===")
+    print(f"{'preset':8}{'쌍':20}{'op':11}{'교차':>7}{'−2%':>7}{'+2%':>7}{'횟수':>5}"
+          f"{'L1비':>7}{'Lmax비':>8}  판정")
+    print("-" * 108)
+    for label, (prefix, depth) in V3.items():
+        data = load_v3(prefix, mode)
+        note = "  ⚠️ 관측점 4개 — 보간 구간이 넓어 소수점 신뢰도 낮음" if depth <= 4 else ""
+        for a, b in PAIRS:
+            for op in HEAVY:
+                A, B = data.get((a, op)), data.get((b, op))
+                if not A or not B:
+                    continue
+                xs = sorted(A)
+                c, r = crossings_v3(A, B)
+                lo, _ = crossings_v3(A, B, 1 - DRIFT)
+                hi, _ = crossings_v3(A, B, 1 + DRIFT)
+                v, _ = verdict(c, lo, hi, r, xs, a, b)
+                f = lambda x: f"{x[0]:.2f}" if x else "없음"
+                print(f"{label:8}{a+'/'+b:20}{op:11}{f(c):>7}{f(lo):>7}{f(hi):>7}{len(c):>5}"
+                      f"{r[0]:>7.3f}{r[-1]:>8.3f}  {v}")
+        if note:
+            print(f"{'':8}{note}")
+        print()
+    print(f"※ 관측점 수: A 12 · C 10 · B 6 · D 4. 보간은 인접 레벨 사이에서만 하므로")
+    print(f"  교차 '유무'는 관측점 수와 무관하지만, 교차 레벨의 소수점 신뢰도는 D에서 가장 낮다.")
+    print(f"※ Lattigo 가 낀 쌍의 경량 op({', '.join(sorted(GC_OPS))})는 Go GC 로 측정 불가라 제외했다.")
+
+
 def main(th="1t"):
     print(f"SEAL / OpenFHE 교차점 ({th}) — 첫 교차를 취한다  [입력: {RESULTS_DIR}/]")
     print(f"{'preset':8}{'op':7}{'교차':>9}{'−2%':>9}{'+2%':>9}{'교차횟수':>9}   L1 / Lmax")
@@ -69,4 +162,9 @@ def main(th="1t"):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1] if len(sys.argv) > 1 else "1t")
+    # v1:  crossing_points.py [1t|mt]
+    # v3:  crossing_points.py v3 [1t|mt]
+    if len(sys.argv) > 1 and sys.argv[1] == "v3":
+        main_v3(sys.argv[2] if len(sys.argv) > 2 else "1t")
+    else:
+        main(sys.argv[1] if len(sys.argv) > 1 else "1t")
