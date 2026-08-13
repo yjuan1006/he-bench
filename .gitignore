@@ -21,6 +21,7 @@ seal_bench
 seal_precision
 openfhe_precision
 param_dump_openfhe
+boot_param_dump_openfhe
 ksprec_openfhe
 ksprec_seal
 presetsearch_openfhe
@@ -37,8 +38,17 @@ seal_align
 results_*.csv
 plot_*.png
 
+# ⚠️ 단, results/ 트리는 예외다 (2026-08-08 개편).
+# 여기 있는 것은 '재생성 가능한 임시 산출물'이 아니라 분류·보존된 측정본이고,
+# run_*.sh 가 이제 -out 을 results/ 아래로 보낸다. 예외가 없으면 새 측정본이
+# 위 results_*.csv 패턴에 걸려 **조용히 무시**된다 — 커밋 누락으로 PNG 12장을
+# 잃은 이력이 있으므로(PROJECT_CONTEXT §5-5) 패턴으로 막아 둔다.
+!results/**/*.csv
+
 # --- 저장된 실행 산출물 ---
-runs/
+# ⚠️ 루트 고정(`/runs/`). 예전엔 `runs/` 라 어느 깊이든 걸려서
+# results/v3/A/runs/ (재실행본) 까지 통째로 무시됐다.
+/runs/
 
 # --- 에디터/OS 부산물 ---
 .vscode/

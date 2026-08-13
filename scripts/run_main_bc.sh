@@ -13,6 +13,9 @@
 # ★ 6개 실행 전부 코어 12 고정 — 반드시 순차. 프로브 전후 확인.
 set -u
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; ROOT="$(cd "$HERE/.." && pwd)"; cd "$ROOT"
+# 산출물 목적지 규칙 (2026-08-08 results/ 트리 개편) — scripts/respath.sh
+# shellcheck source=respath.sh
+source "$HERE/respath.sh"
 export LD_LIBRARY_PATH="/data/yja/openfhe-install/lib:${LD_LIBRARY_PATH:-}"
 export PATH="$HOME/.local/go/bin:$PATH"
 SB="${SCRATCH:-/tmp/claude-1000/-data/7cf884b9-bd1e-4758-b15c-d8ff0b9568b3/scratchpad}"
@@ -38,7 +41,7 @@ run_preset(){  # tag  ofspec  laspec  sespec
     -reps "$REPS" -warmup "$WARMUP" -precreps "$PRECREPS" -out "$RAW/se.csv" -precout "$RAW/se_prec.csv"
 
   for kind in timing precision; do
-    local dest="$ROOT/results_${tag}_${kind}_1t_dku16c.csv"
+    local dest; dest="$(res_out "$ROOT" "results_${tag}_${kind}_1t_dku16c.csv")"
     local sfx=""; [ "$kind" = precision ] && sfx="_prec"
     head -1 "$RAW/of${sfx}.csv" > "$dest"
     for f in of la se; do tail -n +2 "$RAW/${f}${sfx}.csv" >> "$dest"; done

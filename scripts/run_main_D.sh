@@ -12,6 +12,9 @@
 #       post 프로브가 타이밍이 아니라 (대부분 직렬인) 정밀도 구간의 클럭을 잰다.
 set -u
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; ROOT="$(cd "$HERE/.." && pwd)"; cd "$ROOT"
+# 산출물 목적지 규칙 (2026-08-08 results/ 트리 개편) — scripts/respath.sh
+# shellcheck source=respath.sh
+source "$HERE/respath.sh"
 export LD_LIBRARY_PATH="/data/yja/openfhe-install/lib:${LD_LIBRARY_PATH:-}"
 export PATH="$HOME/.local/go/bin:$PATH"
 SB="${SCRATCH:-/tmp/claude-1000/-data/7cf884b9-bd1e-4758-b15c-d8ff0b9568b3/scratchpad}"
@@ -47,7 +50,7 @@ one se_mt "$SOLO" 1 ./build_seal/presetsearch_seal -mainrun "$SES" -threads mt \
 merge(){ local dest=$1; shift; head -1 "$1" > "$dest"
   for f in "$@"; do tail -n +2 "$f" >> "$dest"; done
   echo "  $dest  ($(( $(wc -l < "$dest") - 1 ))행)"; }
-merge "$ROOT/results_${TAG}_timing_1t_dku16c.csv"    "$RAW/of_1t.csv" "$RAW/la_1t.csv" "$RAW/se_1t.csv"
-merge "$ROOT/results_${TAG}_precision_1t_dku16c.csv" "$RAW/of_1t_prec.csv" "$RAW/la_1t_prec.csv" "$RAW/se_1t_prec.csv"
-merge "$ROOT/results_${TAG}_timing_mt_dku16c.csv"    "$RAW/of_mt.csv" "$RAW/la_mt.csv" "$RAW/se_mt.csv"
+merge "$(res_out "$ROOT" "results_${TAG}_timing_1t_dku16c.csv")"    "$RAW/of_1t.csv" "$RAW/la_1t.csv" "$RAW/se_1t.csv"
+merge "$(res_out "$ROOT" "results_${TAG}_precision_1t_dku16c.csv")" "$RAW/of_1t_prec.csv" "$RAW/la_1t_prec.csv" "$RAW/se_1t_prec.csv"
+merge "$(res_out "$ROOT" "results_${TAG}_timing_mt_dku16c.csv")"    "$RAW/of_mt.csv" "$RAW/la_mt.csv" "$RAW/se_mt.csv"
 echo "MAIN_D_DONE fail=$fail"

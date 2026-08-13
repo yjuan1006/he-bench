@@ -16,6 +16,9 @@ import sys
 import numpy as np
 import pandas as pd
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import respath  # noqa: E402  (경로 해석 — scripts/respath.py)
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PRESET = "v2n15d40L13"
 LIB_ORDER = {"openfhe": 0, "lattigo": 1, "seal": 2}
@@ -66,7 +69,7 @@ def physics_gate(df):
 
 
 def main():
-    t = pd.read_csv(os.path.join(ROOT, f"results_{PRESET}_timing_1t_dku16c.csv"))
+    t = pd.read_csv(respath.find(f"results_{PRESET}_timing_1t_dku16c.csv"))
     bad = t[t.ok != 1]
     if len(bad):
         print(f"※ 컨텍스트 생성 실패 {len(bad)}건")

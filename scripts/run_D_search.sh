@@ -2,6 +2,9 @@
 # run_D_search.sh — 프리셋 D 후보(logN14 depth4/5, Δ42) 정밀도 + 최적 P. 탐색 단계.
 set -u
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; ROOT="$(cd "$HERE/.." && pwd)"; cd "$ROOT"
+# 산출물 목적지 규칙 (2026-08-08 results/ 트리 개편) — scripts/respath.sh
+# shellcheck source=respath.sh
+source "$HERE/respath.sh"
 export LD_LIBRARY_PATH="/data/yja/openfhe-install/lib:${LD_LIBRARY_PATH:-}"
 export PATH="$HOME/.local/go/bin:$PATH"
 SB="${SCRATCH:-/tmp/claude-1000/-data/7cf884b9-bd1e-4758-b15c-d8ff0b9568b3/scratchpad}"
@@ -28,14 +31,14 @@ run(){ local t=$1 out=$2; shift 2
 OMP_NUM_THREADS=1 run p_of "$RAW/p_of.csv" ./build_openfhe/ksprec_openfhe -logN 14 -combos "$OFP" -reps 12
 GOMAXPROCS=1     run p_la "$RAW/p_la.csv" "$KP" -logN 14 -combos "$LAP" -reps 12
                  run p_se "$RAW/p_se.csv" ./build_seal/ksprec_seal -logN 14 -combos "$SEP" -reps 12
-D1="$ROOT/explore/params_D_precision.csv"; head -1 "$RAW/p_of.csv" > "$D1"
+D1="$(res_out "$ROOT" "params_D_precision.csv")"; head -1 "$RAW/p_of.csv" > "$D1"
 for f in p_of p_la p_se; do tail -n +2 "$RAW/$f.csv" >> "$D1"; done
 echo "  $D1  ($(( $(wc -l < "$D1") - 1 ))행)"
 
 # --- 4단계: 최적 P (maxLevel heavy 3종, reps 30) ---
 OMP_NUM_THREADS=1 run t_of /dev/null ./build_openfhe/presetsearch_openfhe -combos "$OFT" -reps 30 -warmup 3 -out "$RAW/t_of.csv"
 GOMAXPROCS=1     run t_la /dev/null "$PS" -combos "$LAT" -reps 30 -warmup 3 -out "$RAW/t_la.csv"
-D2="$ROOT/explore/params_D_optp.csv"; head -1 "$RAW/t_of.csv" > "$D2"
+D2="$(res_out "$ROOT" "params_D_optp.csv")"; head -1 "$RAW/t_of.csv" > "$D2"
 tail -n +2 "$RAW/t_of.csv" >> "$D2"; tail -n +2 "$RAW/t_la.csv" >> "$D2"
 echo "  $D2  ($(( $(wc -l < "$D2") - 1 ))행)"
 echo "D_SEARCH_DONE fail=$fail"

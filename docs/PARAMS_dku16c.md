@@ -20,6 +20,24 @@
 추출 도구는 저장소에 있다: `src/param_dump_openfhe.cpp`, `src/param_dump_lattigo.go`
 (둘 다 벤치마크를 실행하지 않고 파라미터만 덤프한다).
 
+**부트스트래핑 항목 (2026-08-11 추가, §9 대응).** 위 §1~§8 의 8-op 항목은 그대로 두고
+아래를 **덧붙인다**. 도구는 `src/boot_param_dump_openfhe.cpp`, `src/boot_param_dump_lattigo.go`
+(둘 다 `EvalBootstrapKeyGen`·`GenEvaluationKeys` 를 호출하지 않는다).
+
+| lib | 항목 | API | 소스 검증 위치 |
+|-----|------|-----|----------------|
+| OpenFHE | 부트 깊이 | `FHECKKSRNS::GetBootstrapDepth(levelBudget, secretKeyDist)` (정적, 컨텍스트 불필요) | `ckksrns-fhe.cpp:2206-2214` — `GetModDepthInternal + lb[0] + lb[1]` |
+| OpenFHE | approxModDepth | 위 값에서 `lb[0]+lb[1]` 을 뺀 값 | `ckksrns-fhe.cpp:2222-2226` — UNIFORM_TERNARY 는 `PS깊이(g_coefficientsUniform) + R_UNIFORM(6)` |
+| OpenFHE | correctionFactor | `cc->GetCKKSBootCorrectionFactor()` (`EvalBootstrapSetup` 이후) | `ckksrns-fhe.cpp:100-119` 설정 / `cryptocontext.h:3617` 접근자 |
+| OpenFHE | `deg` (q0·Δ 커플링) | `round(log2(Q[0] / 2^GetPlaintextModulus()))` | `ckksrns-fhe.cpp:532-537`. CKKS 의 평문 모듈러스 = `scalingModSize` (`gen-cryptocontext-ckksrns-internal.h:95`) |
+| OpenFHE | K (근사 구간) | **API 없음.** 컴파일 상수 | `ckksrns-fhe.h:424` `K_UNIFORM = 512` (SPARSE 28 / SPARSE_ENCAPSULATED 16). **덤프 CSV 에서 이 한 칸만 소스 상수다** |
+| Lattigo | 잔여 / 부트 파라미터 분리 | `btp.ResidualParameters` / `btp.BootstrappingParameters` (각각 `ckks.Parameters`) | `circuits/ckks/bootstrapping/parameters.go:18-34` |
+| Lattigo | EvalMod 레벨 수 | `btp.Mod1ParametersLiteral.Depth()` | `circuits/ckks/mod1/mod1_parameters.go:57-73` — `bits.Len64(max(Mod1Degree, 2K−1)) + DoubleAngle` |
+| Lattigo | K | `btp.Mod1ParametersLiteral.K` | ⚠️ `parameters_literal.go:GetK` 는 **Xs 를 보지 않는다** — dense 로 바꿔도 기본 16 이 그대로 온다 |
+| Lattigo | C2S / S2C 분해 깊이 | `sum(btp.CoeffsToSlotsParameters.Levels)` / `sum(btp.SlotsToCoeffsParameters.Levels)` | `parameters.go:126-201` |
+| Lattigo | 부트 깊이 | `BootstrappingParameters.QCount() − ResidualParameters.QCount()` | `parameters.go:206-245` `LogQBootstrappingCircuit` 구성 |
+| 128비트 상한 (logN 16) | **SEAL 로는 못 얻는다** — `MaxBitCount` 는 N=32768 이 최대다 | Bossuat et al., IACR ePrint 2024/463, Table 5.2: **214 / 430 / 868 / 1747** (logN 13/14/15/16) |
+
 ---
 
 ## 2. 파라미터 대조표
@@ -585,3 +603,170 @@ C만 P 정책이 갈려(OF 300 / LA 240) 수열도 다르다.
 v1의 "동일 Q 체인 위의 비교이지 동일 보안 수준의 비교가 아니다"(§3)라는 한계가
 v3에서 해소됐다. 다만 **P가 라이브러리마다 다른 것은 의도된 설계**다 — 각자 최적 조건에
 세우고 비교하는 것이 목적이며, "동일 P에서의 비교"는 아니다.
+
+---
+
+## 9. 부트스트래핑 파라미터 (후보) — 2026-08-11
+
+**§1~§8은 그대로 둔다.** 그 값들은 8-op 프리셋(v1 archive · v3 A~D)의 정본이다.
+이 절은 부트스트래핑 **1단계(격자 탐색)** 의 산출이며, 선정 과정과 판단은
+`PROJECT_CONTEXT.md §10` 에 있다.
+
+⚠️ **여기 있는 것은 후보이지 확정 프리셋이 아니다.** 정밀도를 재지 않은 상태에서는
+(q0, Δ)를 고를 수 없다. 확정은 2단계 이후다.
+⚠️ **SEAL 없음** — CKKS 부트스트래핑을 지원하지 않아 OpenFHE·Lattigo **2자**다.
+⚠️ **보안 상한의 출처가 §8과 다르다.** 여기는 Bossuat et al., IACR ePrint 2024/463,
+Table 5.2 의 **1747** (logN 16, λ=128, uniform ternary, σ=3.19)을 쓴다.
+§8의 `seal::CoeffModulus::MaxBitCount(tc128)` (218/438/881)과 **같은 표에 섞지 말 것.**
+
+값은 전부 **런타임 API 추출**이다(추출 경로는 §1의 부트 항목). 예외는 OpenFHE의 `K` 하나뿐이며
+그 자리에 근거를 적어 두었다. 비트는 §8과 같이 **명목(round(log2))** 로 통일한다.
+
+### 9.1 고정 조건 (탐색 대상 아님)
+
+| 항목 | OpenFHE | Lattigo |
+|---|---|---|
+| logN / 링 차원 | 16 / 65536 | 16 / 65536 |
+| 슬롯 | **전체 2^15 = 32768** | **전체 2^15 = 32768** (`LogSlots = 15`) |
+| 비밀키 | `SecretKeyDist = UNIFORM_TERNARY` (dense) | `Xs = Ternary{P: 2/3}` (dense) |
+| sparse-secret encapsulation | 해당 없음 | **`EphemeralSecretWeight = 0` (끔)** |
+| 스케일링 | `FIXEDMANUAL` | — |
+| 보안 레벨 | `HEStd_NotSet` (링 차원 강제) | — |
+| K (근사 구간) | **512** (`ckksrns-fhe.h:424` `K_UNIFORM`, API 미노출) | **512 명시** (기본 16 이면 조용히 깨진다) |
+| σ | 3.19 (기본) | 3.2 (기본) |
+| P 프라임 크기 | `auxBits = 60` (NATIVEINT=64 상수) | **61** (라이브러리 기본) |
+
+### 9.2 부트 깊이 정본 — levelBudget(분해깊이)별
+
+**전부 런타임 추출**이다. OpenFHE는 `FHECKKSRNS::GetBootstrapDepth`, Lattigo는
+`QCount_boot − QCount_residual`.
+
+| levelBudget (C2S, S2C) | OpenFHE 부트 깊이 | Lattigo 부트 깊이 | 차 |
+|---|---:|---:|---:|
+| {1,1} | **16** | (격자 축 밖) | — |
+| {2,2} | 18 | 17 | **+1** |
+| {3,3} | **20** | **19** | **+1** |
+| {3,4} · {4,3} | 21 | 20 | **+1** |
+| {4,4} | 22 | 21 | **+1** |
+
+분해 결과:
+
+| | OpenFHE | Lattigo |
+|---|---|---|
+| 모듈러 감산부 | `approxModDepth` = **14** (`= PS깊이(g_coefficientsUniform) 8 + R_UNIFORM 6`) | `EvalMod` = **13** (`bits.Len64(max(30, 2·512−1)) + DoubleAngle 3 = 10 + 3`) |
+| 선형변환부 | `levelBudget[0] + levelBudget[1]` | C2S 분해깊이 + S2C 분해깊이 |
+
+→ **선형변환 깊이는 양쪽이 같고, 차이는 모듈러 감산부 1레벨뿐이다.**
+
+⚠️ Lattigo에서 `K` 를 명시하지 않으면 EvalMod가 **13 → 8** 로 떨어진다
+(`GetK()` 가 `Xs` 를 보지 않는다). 부트 깊이가 5레벨 작아 보이지만 **근사 구간을 넘어
+결과가 쓰레기가 되며 예외도 나지 않는다.**
+
+### 9.3 q0 · Δ 커플링 (OpenFHE 전용 제약)
+
+실제 허용 구간은 **`0 < q0 − Δ ≤ 7`** 이다. 두 개의 독립된 가드다.
+
+| 가드 | 소스 | 조건 |
+|---|---|---|
+| `deg > correctionFactor` → THROW | `ckksrns-fhe.cpp:532-537` (**`EvalBootstrap` 본체**) | `q0 − Δ ≤ correctionFactor` |
+| `firstModSize must be > scalingModSize` | `ckksrns-parametergeneration.cpp:214` | `q0 > Δ` |
+
+**런타임 correctionFactor = 7** (logN 16 / 전체 슬롯 / FIXEDMANUAL).
+`clamp(round(−0.1516 × (2·log2 N + log2 slots) + 14.284), 6, 13)` = `clamp(round(7.1588),6,13)` = 7.
+실측 5점(Δ=50/52/53/55/60)에서 **Δ ≤ 52 에서만 가드 위반**으로 예측과 일치한다.
+
+⚠️ `correctionFactor` 는 **슬롯 수에 의존**한다 — 부분 슬롯 아암에서는 재계산이 필요하다.
+⚠️ 이 가드는 `EvalBootstrapSetup` 이 아니라 `EvalBootstrap` 안에 있어 **keygen 없이는
+예외가 나지 않는다.** 대조는 같은 입력으로 같은 식을 런타임 값에서 계산해 수행했다.
+⚠️ **Lattigo에는 대응 제약이 없다** (격자 전수에서 실패 0건).
+⚠️ **A~D의 (q0=60, Δ=42/48)은 이 제약으로 성립하지 않는다.** 부트 세트에서 Δ가 A~D와
+달라지는 것은 불가피하다.
+
+### 9.4 회전키 개수 (Lattigo만)
+
+`btp.CoeffsToSlotsParameters.GaloisElements()` ∪ `SlotsToCoeffsParameters.GaloisElements()`
+∪ 켤레 자기동형 1개. **q0·Δ·잔여L·PCount·EvalMod scale과 무관**함을 기준점 2개로 대조 확인했다.
+
+| C2S \ S2C | 1 | 2 | 3 | 4 |
+|---|---:|---:|---:|---:|
+| **1** | **383** | 390 | 390 | 388 |
+| **2** | 390 | 61 | 72 | 67 |
+| **3** | 390 | 72 | **39** | 48 |
+| **4** | 388 | 67 | 48 | **33** |
+
+**대각선(양쪽 같은 깊이)에서 깊이 1이 깊이 4의 11.6배**다. 비대각선은 얕은 쪽이 지배한다.
+
+⚠️ **OpenFHE 대응값은 이번 단계에서 얻지 못했다.**
+`FHECKKSRNS::FindBootstrapRotationIndices` 가 `ckksrns-fhe.h:342` (`private:` 331 뒤)이고
+공개 경로는 `EvalBootstrapKeyGen` 뿐이라 keygen 없이는 불가능하다. 선형변환 구조가 양쪽
+동일하므로 **참고 지표로만 쓰고**, 실제 값은 2단계 keygen에서 확인한다.
+
+### 9.5 후보 파라미터 — levelBudget {3,3} 기준, (q0, Δ)별 최대 잔여 L
+
+`explore/boot_params/boot_stage2_candidates.csv` 에서 뽑았다.
+조건: 분해깊이 2~4 · **양쪽 dnum ≤ 8** (keygen 시간 통제) · Δ 전 범위 유지.
+**dnum/PCount는 levelBudget을 고정한 안에서만 최소화**한 값이다(`PROJECT_CONTEXT.md §10.7-2`).
+
+| q0 | Δ | 최대 L | OF dnum | OF PC | OF logP | OF logQP | 여유 | LA dnum | LA PC | LA logP | LA logQP | 여유 |
+|---:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+| 40 | 33 | **14** | 3 | 7 | 420 | 1582 | 165 | 7 | 5 | 305 | 1742 | 5 |
+| 40 | 35 | 13 | 3 | 8 | 480 | 1675 | 72 | 7 | 5 | 305 | 1735 | 12 |
+| 40 | 38 | 12 | 3 | 7 | 420 | 1676 | 71 | 7 | 5 | 305 | 1736 | 11 |
+| 40 | 40 | 12 | 4 | 7 | 420 | 1740 | 7 | 8 | 4 | 244 | 1699 | 48 |
+| 42 | 35 | 13 | 3 | 8 | 480 | 1677 | 70 | 7 | 5 | 305 | 1737 | 10 |
+| 42 | 38 | 12 | 3 | 8 | 480 | 1738 | 9 | 7 | 5 | 305 | 1738 | 9 |
+| 42 | 40 | 12 | 4 | 7 | 420 | 1742 | 5 | 8 | 4 | 244 | 1701 | 46 |
+| 42 | 42 | 12 | 5 | 5 | 300 | 1686 | 61 | 8 | 4 | 244 | 1725 | 22 |
+| 45 | 38 | 12 | 3 | 8 | 480 | 1741 | 6 | 7 | 5 | 305 | 1741 | 6 |
+| 45 | 40 | 12 | 4 | 7 | 420 | 1745 | 2 | 8 | 4 | 244 | 1704 | 43 |
+| 45 | 42 | 12 | 5 | 5 | 300 | 1689 | 58 | 8 | 4 | 244 | 1728 | 19 |
+| 45 | 45 | 11 | 6 | 5 | 300 | 1740 | 7 | 8 | 4 | 244 | 1719 | 28 |
+| 50 | 45 | 11 | 6 | 5 | 300 | 1745 | 2 | 8 | 4 | 244 | 1724 | 23 |
+| 50 | 48 | 10 | 8 | 4 | 240 | 1730 | 17 | 8 | 4 | 244 | 1709 | 38 |
+| 50 | 50 | 9 | 8 | 4 | 240 | 1740 | 7 | 6 | 5 | 305 | 1740 | 7 |
+| 55 | 48 | 10 | 8 | 4 | 240 | 1735 | 12 | 8 | 4 | 244 | 1714 | 33 |
+| 55 | 50 | 9 | 8 | 4 | 240 | 1745 | 2 | 6 | 5 | 305 | 1745 | 2 |
+| 55 | 55 | 6 | 7 | 4 | 240 | 1725 | 22 | 4 | 7 | 427 | 1747 | **0** |
+| 60 | 55 | 6 | 7 | 4 | 240 | 1730 | 17 | 5 | 6 | 366 | 1691 | 56 |
+| 60 | 58 | 4 | 7 | 4 | 240 | 1692 | 55 | 3 | 8 | 488 | 1715 | 32 |
+
+`{4,4}` 기준은 같은 (q0, Δ)에서 최대 L이 **2~3 작다** (예: (45,40) 12 → 10, (60,55) 6 → 4).
+전체 표는 CSV에 있다.
+
+**읽는 법**
+- **q0가 낮을수록 잔여 L이 크다.** q0=40~45 대역이 L 11~14, q0=60은 L 4~6이다.
+  기전은 q0 자체가 아니라 9.3의 커플링이다 — q0=60이면 Δ ≥ 53만 허용된다.
+- **각 행의 잔여 L은 그 (q0, Δ, levelBudget)에서의 최대치**다. 더 작은 L도 전부 후보이며
+  CSV에 들어 있다(816행).
+- ⚠️ **Δ가 작을수록 L이 크지만 정밀도는 나빠질 것으로 예상된다.** 그 교환비 곡선이 2단계의
+  결과물이므로 **여기서 Δ를 자르지 않았다** — 33부터 58까지 10개 전부 살아 있다.
+
+### 9.6 논문 Table 5.8 재현 대조 (도구 검증용 — 프리셋 후보 아님)
+
+| | 항목 | 논문 | 실측 (v6.2.0 / v1.5.1) | 차 |
+|---|---|---:|---:|---:|
+| **Set I** (Lattigo, v5.0.2) | logQ | 1464 | 1499 | +35 |
+| q0 45 / Δ 2^35 / 잔여L 10 | logP | 305 | 305 | 0 |
+| dense, encapsulation off, K 512 | **logQP** | 1734 | **1804** | **+70** |
+| S2C 4 / EvalMod 12 / C2S 3 | EvalMod 레벨 | 12 | **13** | **+1** |
+| **Set II** (OpenFHE, v1.2.0) | logQ | 1511 | 1568 | +57 |
+| q0 60 / Δ 2^58 / 잔여L 6 | logP | 180 | **540** | **+360** |
+| UNIFORM_TERNARY, dnum 3 | **logQP** | 1691 | **2108** | **+417** |
+| S2C 3 / EvalMod 13 / C2S 3 | EvalMod 레벨 | 13 | **14** | **+1** |
+
+- **양쪽 다 EvalMod가 +1레벨.** v6.2.0의 `mod1.ParametersLiteral.Depth()` 는
+  `bits.Len64(max(Mod1Degree, 2K−1)) + DoubleAngle` 이라 **K=512로는 12레벨이 나올 수 없다**
+  (`bits.Len64(1023)=10`, `+3` → 13). 12가 되려면 `K ≤ 256` 이어야 한다.
+  Set I의 logQ 격차 +35 중 **+60이 이 1레벨**이고(EvalMod scale 60), 나머지는 반대 방향이다 —
+  S2C·C2S 배분에서 **8~25비트가 미규명**으로 남는다. `logP`(305)와 잔여 체인(395)은 **정확히 일치**한다.
+- **Set II의 logP +360은 dnum 표기 해석 차이로 규명됐다** (`PROJECT_CONTEXT.md §10.7-5`).
+  논문의 "dnum 3"을 `numPerPartQ`(digit당 타워 수)로 읽으면 digit 176비트 → PCount 3 →
+  **logP 180**으로 정확히 맞는다. `numPartQ`(digit 개수)로 읽으면 perPart 9 → digit 524비트 →
+  PCount 9 → logP 540이다. **§8.5 규칙 4 자체는 그대로 성립한다.**
+  체인 길이까지 논문에 맞추면(26타워) **logQ 1510 / logP 180 / logQP 1690** 으로
+  논문(1511 / 180 / 1691)과 **1비트 차이**다 — 명목(round(log2)) 관례 차이다.
+- **FLEXIBLEAUTO 가설은 기각됐다.** 대조 1회 결과 logQ 1568로 동일, maxDigitBits만 524→525,
+  PCount·logP는 9·540으로 같다. 스케일링 기법은 +417의 어느 부분도 설명하지 못한다.
+- ⚠️ **두 세트 모두 우리 도구로는 상한 1747을 넘는다**(1804 / 2108).
+  논문 §5.2가 "라이브러리 간 비교 목적이 아니다"라고 명시한 대로 **프리셋으로 베끼면 안 된다.**
+- ⚠️ Set II는 논문이 FLEXIBLEAUTO였으나 본 프로젝트는 **FIXEDMANUAL 고정**이라 그대로 재현했다.

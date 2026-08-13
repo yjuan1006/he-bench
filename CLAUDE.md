@@ -20,13 +20,22 @@ CKKS 연산의 **암호문 1개 기준** latency를 OpenFHE(C++) · Lattigo(Go) 
 - 작업은 리눅스 홈 `~/he-bench`에서. `/mnt/c`(Windows FS)에서 빌드 금지(I/O 느림).
 - 파일 인코딩 UTF-8. 코드 주석 한국어 허용.
 
-## 디렉터리 (2026-08-01 개편 — 플랫 구조 폐지)
+## 디렉터리 (2026-08-01 개편 — 플랫 구조 폐지 / 2026-08-08 결과 CSV 분류)
 - `src/` — lattigo_bench.go, openfhe_bench.cpp, seal_bench.cpp, *_precision.*, param_dump_*, calib.c
 - `scripts/` — run_*.sh, aggregate.py, crossing_points.py, probe_check.py, clock_verdict.py …
+  - `respath.py` / `respath.sh` — **결과 CSV 위치 규칙의 정본**(읽는 쪽 / 쓰는 쪽)
 - `docs/` — PARAMS_dku16c.md, PROJECT_CONTEXT.md, SETUP_DKU16C.md, SEAL_TASK.md, ENV_dku16c.txt
+- `results/` — 측정 CSV 66. `v3/{A,B,C,D}` · `hexl/{arm,superseded}` ·
+  `baseline_mt_runs/{,superseded}` · `v2_discarded/`. **디렉터리마다 README.md 가 채택본/대체본을 밝힌다**
+- `explore/` — 집계 요약(v3_summary_*, hexl*_summary*) + `params/` 파라미터 탐색 덤프 17
+  - `boot_params/` — 부트스트래핑 1단계 격자 덤프(2자, keygen 없음). 보안 상한 출처가
+    A~D와 다르다(ePrint 2024/463 Table 5.2 = 1747 ↔ seal MaxBitCount). **같은 표에 섞지 말 것**
 - `archive/v1/` — 구 프리셋 측정 결과 (results/ CSV 25, plots/ PNG 24). **수정 금지**
 - 루트 — README.md, CLAUDE.md, CMakeLists.txt, go.mod/go.sum, calib, build_*/ , third_party/
-- 실행 산출: results_*.csv 는 루트, 집계 산출(plot_*.png / results_combined*.csv)은 plots/8op/
+- 실행 산출: `run_*.sh` 가 `respath.sh` 를 거쳐 **`results/` 아래로** 떨어뜨린다(예전엔 루트).
+  집계 산출(plot_*.png / results_combined*.csv)은 plots/8op/ · plots/v3/
+- ⚠️ 결과 CSV를 읽는 새 스크립트를 만들면 경로를 하드코딩하지 말고 `respath.find("<파일명>")`을 쓸 것.
+  같은 이름이 두 곳에 있으면 중단한다(루트 잔여본 × 분류본의 조용한 혼동 방지).
 
 ## 공통 측정 스펙 (두 구현이 반드시 동일하게)
 CSV 스키마(헤더 고정, **세 라이브러리 동일**):

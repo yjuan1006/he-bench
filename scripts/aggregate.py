@@ -76,6 +76,9 @@ THREAD_MODE = "1t"  # --suffix에서 유도. 물리 게이트가 1t/mt를 다르
 
 # 스크립트가 scripts/ 로 내려갔으므로 CWD 상대 경로는 실행 위치에 따라 깨진다.
 # 입력·출력 모두 리포 루트를 기준으로 해석한다.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import respath  # noqa: E402  (경로 해석 — scripts/respath.py)
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # 8-op 산출물 디렉터리 (PNG·CSV 공용). 부트스트래핑(plots/boot)·key-switch(plots/ks)와 분리.
@@ -90,21 +93,29 @@ def out_path(name):
 
 
 def in_path(path):
-    """입력 CSV 경로 해석: CWD 기준 → 없으면 리포 루트 기준.
+    """입력 CSV 경로 해석: CWD 기준 → results/ 트리 탐색 → 리포 루트 기준.
 
     구조 개편(2026-08-01)으로 구 프리셋 CSV는 archive/v1/results/ 로 갔고 스크립트는
-    scripts/ 로 갔다. 루트에서 돌리든 scripts/ 안에서 돌리든 같은 인자가 먹히게 한다.
+    scripts/ 로 갔다. 2026-08-08 개편에서 v3·hexl·baseline 측정본이 루트에서
+    results/ 아래로 갈렸다 → 파일명만 줘도 찾도록 respath 로 넘긴다.
+    루트에서 돌리든 scripts/ 안에서 돌리든 같은 인자가 먹히게 한다.
+
+    ⚠️ 못 찾아도 여기서 중단하지 않는다 — 호출부의 --openfhe/--seal 입력 가드가
+    "조용한 반쪽 실행 금지" 메시지를 내야 하므로 그쪽에 판정을 넘긴다.
     """
     if os.path.isabs(path) or os.path.exists(path):
         return path
+    if respath.exists(path):
+        return respath.find(path)
     return os.path.join(ROOT, path)
 
 
 def avail_hint(pattern):
-    """가드 메시지용: 루트와 아카이브 양쪽에서 실제로 있는 CSV를 찾아 알려준다."""
-    found = sorted(glob.glob(os.path.join(ROOT, pattern))
-                   + glob.glob(os.path.join(ROOT, "archive", "v1", "results", pattern)))
-    return [os.path.relpath(p, ROOT) for p in found]
+    """가드 메시지용: 실제로 있는 CSV를 찾아 알려준다.
+
+    탐색 범위는 respath.SEARCH_DIRS — 루트·results/ 트리·archive/v1·explore 를 모두 본다.
+    """
+    return respath.avail(pattern)
 
 
 # 이 스크립트는 8-op 벤치 전용이다. 부트스트래핑(results_boot*)과 key-switch 단건(results_ks*)은

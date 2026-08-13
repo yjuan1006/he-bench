@@ -18,6 +18,9 @@
 # 인-런 모니터는 쓰지 않는다 — 코어를 뺏으면 OpenFHE OMP 조건이 깨진다(v1 실측 4.3~5.2배 왜곡).
 set -u
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; ROOT="$(cd "$HERE/.." && pwd)"; cd "$ROOT"
+# 산출물 목적지 규칙 (2026-08-08 results/ 트리 개편) — scripts/respath.sh
+# shellcheck source=respath.sh
+source "$HERE/respath.sh"
 export LD_LIBRARY_PATH="/data/yja/openfhe-install/lib:${LD_LIBRARY_PATH:-}"
 export PATH="$HOME/.local/go/bin:$PATH"
 SB="${SCRATCH:-/tmp/claude-1000/-data/7cf884b9-bd1e-4758-b15c-d8ff0b9568b3/scratchpad}"
@@ -46,7 +49,7 @@ run_preset(){  # tag ofspec laspec sespec
     -reps "$REPS" -warmup "$WARMUP" -precreps "$PRECREPS" -out "$RAW/se.csv" -precout "$RAW/se_prec.csv"
 
   for kind in timing precision; do
-    local dest="$ROOT/results_${tag}_${kind}_mt_dku16c.csv"; local sfx=""
+    local dest; dest="$(res_out "$ROOT" "results_${tag}_${kind}_mt_dku16c.csv")"; local sfx=""
     [ "$kind" = precision ] && sfx="_prec"
     head -1 "$RAW/of${sfx}.csv" > "$dest"
     for f in of la se; do tail -n +2 "$RAW/${f}${sfx}.csv" >> "$dest"; done

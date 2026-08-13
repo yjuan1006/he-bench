@@ -22,6 +22,7 @@ mt 의 불확실성 처리 — 이게 이 아암의 핵심 주의점이다.
   한글 폰트가 없으므로 그림 안 문자열은 전부 영어.
 """
 import os
+import sys
 
 import matplotlib
 matplotlib.use("Agg")
@@ -36,6 +37,9 @@ plt.rcParams.update({
     "xtick.labelsize": 13, "ytick.labelsize": 13,
     "legend.fontsize": 13, "figure.titlesize": 20,
 })
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import respath  # noqa: E402  (경로 해석 — scripts/respath.py)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "plots", "v3", "hexl")
@@ -71,7 +75,7 @@ def save(fig, name):
 
 # ═══════════════════════════════════════════════ 데이터
 def q(path):
-    return pd.read_csv(os.path.join(ROOT, path)).query("ok == 1")
+    return pd.read_csv(respath.find(path)).query("ok == 1")
 
 
 def load():

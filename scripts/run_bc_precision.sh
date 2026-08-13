@@ -3,6 +3,9 @@
 # 탐색 단계. 비밀키 암호화 · maxLevel · run_warm.sh 코어 고정 + 30초 가열.
 set -u
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; ROOT="$(cd "$HERE/.." && pwd)"; cd "$ROOT"
+# 산출물 목적지 규칙 (2026-08-08 results/ 트리 개편) — scripts/respath.sh
+# shellcheck source=respath.sh
+source "$HERE/respath.sh"
 export LD_LIBRARY_PATH="/data/yja/openfhe-install/lib:${LD_LIBRARY_PATH:-}"
 export PATH="$HOME/.local/go/bin:$PATH"
 SB="${SCRATCH:-/tmp/claude-1000/-data/7cf884b9-bd1e-4758-b15c-d8ff0b9568b3/scratchpad}"
@@ -26,7 +29,7 @@ GOMAXPROCS=1 run la15 "$RAW/la15.csv" "$LAT" -logN 15 -combos "$LA15" -reps "$RE
 run se14 "$RAW/se14.csv" ./build_seal/ksprec_seal -logN 14 -combos "$SE14" -reps "$REPS"
 run se15 "$RAW/se15.csv" ./build_seal/ksprec_seal -logN 15 -combos "$SE15" -reps "$REPS"
 
-D="$ROOT/explore/params_bc_precision.csv"; head -1 "$RAW/of14.csv" > "$D"
+D="$(res_out "$ROOT" "params_bc_precision.csv")"; head -1 "$RAW/of14.csv" > "$D"
 for f in of14 of15 la14 la15 se14 se15; do tail -n +2 "$RAW/$f.csv" >> "$D"; done
 echo "  $D  ($(( $(wc -l < "$D") - 1 ))행)"
 echo "BC_PRECISION_DONE fail=$fail"

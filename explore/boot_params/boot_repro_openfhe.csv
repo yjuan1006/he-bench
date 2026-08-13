@@ -1,0 +1,2 @@
+library,logN,numSlots,q0,delta,residual_L,boot_depth,levelBudget_c2s,levelBudget_s2c,evalmod_levels,K,QCount_boot,logQ_boot,PCount_boot,logP_boot,logQP_boot,QCount_residual,logQ_residual,logP_residual,logQP_residual,dnum,maxDigitBits,margin_1747,ok,fail_reason
+openfhe,16,32768,60,58,6,20,3,3,14,512,27,1568,9,540,2108,7,408,540,948,3,524,-361,0,logQP_boot 2108 > 1747

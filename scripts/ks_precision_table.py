@@ -11,6 +11,9 @@ KS 손실 = enc_dec − rot1 을 **같은 rep끼리 짝지어** 계산한다.
 import os
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import respath  # noqa: E402  (경로 해석 — scripts/respath.py)
+
 import numpy as np
 import pandas as pd
 
@@ -54,4 +57,5 @@ def main(path):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1] if len(sys.argv) > 1 else "params_ks_precision.csv")
+    # 파일명만 줘도 respath 가 explore/params/ 아래에서 찾는다(2026-08-08 개편).
+    main(respath.find(sys.argv[1] if len(sys.argv) > 1 else "params_ks_precision.csv"))

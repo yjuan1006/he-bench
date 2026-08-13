@@ -19,6 +19,9 @@ import sys
 import numpy as np
 import pandas as pd
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import respath  # noqa: E402  (경로 해석 — scripts/respath.py)
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "explore")
 PRESETS = [("A", "v3n15d42L12"), ("B", "v3Bn14d42L6"),
@@ -40,10 +43,12 @@ def main():
     tim, prec = [], []
     for label, pid in PRESETS:
         for mode in MODES:
-            tp = os.path.join(ROOT, f"results_{pid}_timing_{mode}_dku16c.csv")
-            pp = os.path.join(ROOT, f"results_{pid}_precision_{mode}_dku16c.csv")
-            if not os.path.exists(tp):
-                sys.exit(f"[missing] {tp}")
+            tname = f"results_{pid}_timing_{mode}_dku16c.csv"
+            pname = f"results_{pid}_precision_{mode}_dku16c.csv"
+            if not respath.exists(tname):
+                sys.exit(f"[missing] {tname}")
+            tp = respath.find(tname)
+            pp = pname if not respath.exists(pname) else respath.find(pname)
             t = pd.read_csv(tp)
             t = t[t.ok == 1].copy()
             t["preset"], t["mode"] = label, mode
@@ -54,8 +59,8 @@ def main():
                           "dnum", "PCount", "logP", "logQP", "margin",
                           "level", "digit", "op", "mean_us", "std_us", "cv", "reps"]])
 
-            if not os.path.exists(pp):
-                print(f"[note] 정밀도 없음: {os.path.basename(pp)}")
+            if not respath.exists(pname):
+                print(f"[note] 정밀도 없음: {pname}")
                 continue
             p = pd.read_csv(pp)
             pv = p.pivot_table(index=["library", "dnum", "PCount", "logP", "level", "rep"],

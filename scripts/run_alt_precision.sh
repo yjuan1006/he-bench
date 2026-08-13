@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # run_alt_precision.sh — 대안 프리셋 후보의 rot1 정밀도 측정 (탐색 단계, 본측정 아님).
 #
-# 후보는 explore/params_alt_grid.csv 에서 기준 2·3을 통과한 15개 (depth, Δ) 쌍이다:
+# 후보는 explore/params/params_alt_grid.csv 에서 기준 2·3을 통과한 15개 (depth, Δ) 쌍이다:
 #   Lattigo logP 300 여유 ≥5비트 & OpenFHE logP 240 가능 & SEAL P 60(항상 가능)
 # 각 라이브러리는 자기 관례 P를 쓴다 — OpenFHE dnum 3(logP 240) / Lattigo PCount 5(logP 300) / SEAL 60.
 #
@@ -12,6 +12,9 @@
 set -u
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$HERE/.." && pwd)"
+# 산출물 목적지 규칙 (2026-08-08 results/ 트리 개편) — scripts/respath.sh
+# shellcheck source=respath.sh
+source "$HERE/respath.sh"
 cd "$ROOT"
 export LD_LIBRARY_PATH="/data/yja/openfhe-install/lib:${LD_LIBRARY_PATH:-}"
 export PATH="$HOME/.local/go/bin:$PATH"
@@ -50,7 +53,7 @@ OMP_NUM_THREADS=1 run_one openfhe "$RAW/of.csv" \
 GOMAXPROCS=1 run_one lattigo "$RAW/la.csv" "$LATBIN" -combos "$LA" -reps "$REPS"
 run_one seal "$RAW/se.csv" ./build_seal/ksprec_seal -combos "$SE" -reps "$REPS"
 
-DEST="$OUT/params_alt_precision.csv"
+DEST="$(res_out "$ROOT" "params_alt_precision.csv")"
 head -1 "$RAW/of.csv" > "$DEST"
 for f in "$RAW/of.csv" "$RAW/la.csv" "$RAW/se.csv"; do tail -n +2 "$f" >> "$DEST"; done
 echo "  $DEST  ($(( $(wc -l < "$DEST") - 1 ))행)"

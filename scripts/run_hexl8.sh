@@ -16,6 +16,9 @@
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
+# 산출물 목적지 규칙 (2026-08-08 results/ 트리 개편) — scripts/respath.sh
+# shellcheck source=respath.sh
+source "$ROOT/scripts/respath.sh"
 TR=traces/hexl8
 mkdir -p "$TR"
 LOG="$TR/driver.log"
@@ -42,6 +45,8 @@ check_ld() {           # check_ld <bin> <expect_prefix> <libpath>
 # run <tag> <cores> <nwarm> <libpath> <bin> <spec> <threads> <precreps> <timing_out> <prec_out>
 run() {
   local tag=$1 cores=$2 nwarm=$3 lib=$4 bin=$5 spec=$6 th=$7 pr=$8 tout=$9 pout=${10}
+  # 파일명만 받아 목적지 디렉터리로 보낸다 (_hexl8_ → results/hexl/arm, _off8_ → results/baseline_mt_runs)
+  tout=$(res_out "$ROOT" "$tout"); pout=$(res_out "$ROOT" "$pout")
   say "  $tag"
   LD_LIBRARY_PATH="$lib" OMP_NUM_THREADS=$([ "$th" = mt ] && echo 16 || echo 1) \
   PROBE_CORE=12 \
@@ -91,11 +96,11 @@ say "[mt HEXL · 정밀도]"
 LD_LIBRARY_PATH="$OF_HEXL_LIB" OMP_NUM_THREADS=16 PROBE_CORE=12 \
   scripts/run_warm.sh 0-15 16 10 "$TR/of_hexl8_mt_prec" "$OFH" -mainrun "15:12:42:3" \
     -reps 1 -warmup 0 -precreps 12 -threads mt \
-    -out /dev/null -precout ${P}_hexl8_precision_mt_dku16c.csv >> "$LOG" 2>&1
+    -out /dev/null -precout "$(res_out "$ROOT" "${P}_hexl8_precision_mt_dku16c.csv")" >> "$LOG" 2>&1
 LD_LIBRARY_PATH="$SE_HEXL_LIB" OMP_NUM_THREADS=16 PROBE_CORE=12 \
   scripts/run_warm.sh 12 1 10 "$TR/se_hexl8_mt_prec" "$SEH" -mainrun "15:12:42" \
     -reps 1 -warmup 0 -precreps 12 -threads mt \
-    -out /dev/null -precout ${P}_hexl8_precision_mt_seal_dku16c.csv >> "$LOG" 2>&1
+    -out /dev/null -precout "$(res_out "$ROOT" "${P}_hexl8_precision_mt_seal_dku16c.csv")" >> "$LOG" 2>&1
 
 # ── 2단계: baseline mt 를 같은 범위로 재측정.
 #    기존 results_v3n15d42L12_timing_mt_dku16c.csv 는 **덮지 않는다** — 별도 파일(off8)이다.

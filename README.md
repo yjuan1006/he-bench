@@ -34,11 +34,32 @@ CKKS 연산의 **암호문 1개 기준** latency를 OpenFHE(C++) · Lattigo(Go) 
 ```
 src/          벤치·정밀도·파라미터 덤프 소스 (C++ / Go / C)
 scripts/      측정 드라이버(run_*.sh) · 집계/분석 (aggregate.py, crossing_points.py …)
+              respath.py / respath.sh — 결과 CSV 위치 규칙 (읽는 쪽 / 쓰는 쪽)
 docs/         PARAMS_dku16c.md · PROJECT_CONTEXT.md · SETUP_DKU16C.md · SEAL_TASK.md · ENV_dku16c.txt
+results/      측정 CSV 66 (2026-08-08 분류). 디렉터리마다 README.md 가 채택본/대체본을 밝힌다
+  v3/A|B|C|D    확정 4프리셋 본측정 (1t·mt × timing·precision)   ← 채택본
+  hexl/arm      HEXL 아암 8-op 전수  ↔  hexl/superseded (heavy 3종, 대체됨)
+  baseline_mt_runs/   baseline mt 반복 런 (_off8_)  ↔  superseded/ (_off_, 대체됨)
+  v2_discarded/ 폐기된 v2 프리셋 — 대조군으로 보존
+explore/      집계 산출 요약 (v3_summary_*, hexl*_summary*) + params/ 파라미터 탐색 덤프 17
+  boot_params/  부트스트래핑 1단계 격자 덤프 (OpenFHE·Lattigo 2자, keygen 없음) — README.md 참조
 archive/v1/   구 프리셋 측정본 — results/ (CSV 25) · plots/ (PNG 24). **읽기 전용, 논문 근거 자료**
-plots/8op/    새 실행의 집계 산출물이 쌓이는 곳 (v1 산출물을 아카이브로 옮겨 현재 비어 있음)
+plots/8op/    8-op 집계 산출물(PNG·병합 CSV)  ·  plots/v3/ v3 레벨 차트
 루트          README.md · CLAUDE.md · CMakeLists.txt · go.mod/go.sum · calib · build_*/ · third_party/
 ```
+
+### 결과 CSV 의 위치를 스크립트가 찾는 방법
+
+2026-08-08 개편 전에는 측정 CSV 68개가 전부 루트에 평평하게 쌓였고 스크립트마다 경로가
+하드코딩돼 있었다. 지금은 **파일명만 주면 된다** — 탐색·목적지 규칙이 두 파일에 모여 있다.
+
+- 읽는 쪽: `scripts/respath.py` (`find()` / `avail()`). `aggregate.py`·`crossing_points.py`·
+  `v3_unify.py`·`v3_gate_table.py`·`v3_hexl*_plots.py`·`ks_precision_table.py` 가 쓴다.
+- 쓰는 쪽: `scripts/respath.sh` (`res_out`). `run_main_*.sh`·`run_hexl8.sh`·탐색 드라이버가 쓴다.
+- ⚠️ **같은 파일명이 두 곳에 있으면 중단한다.** 새 측정본이 루트에 떨어졌는데 분류본이
+  남아 있는 상태를 조용히 통과시키지 않기 위한 것이다. 하나만 남기고 다시 돌릴 것.
+- ⚠️ `.gitignore` 의 `results_*.csv` 는 `!results/**/*.csv` 로 이 트리에서만 무효화돼 있다.
+  이 예외를 지우면 새 측정본이 **커밋되지 않은 채 조용히 사라진다**.
 
 `calib`(클럭 프로브 바이너리)만 루트에 남는다 — `scripts/run_warm.sh`·`run_monitored.sh`가
 `$ROOT/calib` 로 참조한다. 소스는 `src/calib.c`.
@@ -56,12 +77,19 @@ plots/8op/    새 실행의 집계 산출물이 쌓이는 곳 (v1 산출물을 �
 | `v3Cn15d48L10` (C) | 15 | 10 | 48 |
 | `v3Dn14d42L4` (D) | 14 | 4 | 42 |
 
+측정본은 `results/v3/{A,B,C,D}/` 에 있다. Lattigo 재실행본(`_run2lattigo`)은 `A/runs/`.
+
 `results_v2n15d40L13_*`는 **폐기된 v2**이나 대조군으로 보존한다(정밀도 20% 하한 미달,
-Lattigo 보안 여유 1비트 — `docs/PROJECT_CONTEXT.md §8.1`).
+Lattigo 보안 여유 1비트 — `docs/PROJECT_CONTEXT.md §8.1`). 위치는 `results/v2_discarded/`.
 
 ⚠️ v3 CSV는 **`aggregate.py`에 넣을 수 없다.** 스키마가 다르고 `preset` 어휘도 v1의
 {small,medium,large}가 아니다. `aggregate.py`의 preset 게이트가 거부하는 것은 **의도된 동작**
 (v1/v2/v3 혼입 방지)이며, v3 집계는 `scripts/v3_gate_table.py <preset-id>`를 쓴다.
+
+**HEXL 아암 / baseline mt 반복 런** — 프리셋 A 만. `results/hexl/arm/`(8-op 전수, 채택본)와
+`results/baseline_mt_runs/`(대등 재측정 `_off8_`). 각각 `superseded/` 에 구 범위판(heavy 3종)이 있다.
+⚠️ **프리셋 A 의 mt 를 인용할 때는 `baseline_mt_runs/` 의 중앙값이 정본**이다
+(OpenFHE 5런 / SEAL 3런). 자세한 이유는 그 폴더의 `README.md`.
 
 **v1 (아카이브)** — `results_{lib}_{preset}_{1t|mt}_{machine}.csv`, `preset`∈{small,medium,large}.
 `archive/v1/results/` 에 25개(본측정 18 + 진단 2 + 병합·요약 4 + 잔여 1).

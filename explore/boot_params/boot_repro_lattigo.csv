@@ -1,0 +1,2 @@
+library,logN,numSlots,q0,delta,residual_L,boot_depth,levelBudget_c2s,levelBudget_s2c,evalmod_levels,K,QCount_boot,logQ_boot,PCount_boot,logP_boot,logQP_boot,QCount_residual,logQ_residual,logP_residual,logQP_residual,dnum,maxDigitBits,margin_1747,ok,fail_reason
+lattigo,16,32768,45,35,10,20,3,4,13,512,31,1499,5,305,1804,11,395,366,761,7,300,-57,0,correctionFactor 커플링 위반: q0-Δ=10 > 7 / logQP_boot 1804 > 1747

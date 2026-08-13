@@ -73,6 +73,41 @@ if(BENCH_OPENFHE)
     endif()
     target_link_libraries(param_dump_openfhe ${OpenFHE_SHARED_LIBRARIES})
 
+    # 부트스트래핑 파라미터 격자 덤프(1단계). keygen·벤치를 돌리지 않는다.
+    add_executable(boot_param_dump_openfhe src/boot_param_dump_openfhe.cpp)
+    target_compile_options(boot_param_dump_openfhe PRIVATE ${OPENFHE_BENCH_CXX_FLAGS_LIST})
+    target_include_directories(boot_param_dump_openfhe PRIVATE
+        ${OPENMP_INCLUDES}
+        ${OpenFHE_INCLUDE}
+        ${OpenFHE_INCLUDE}/third-party/include
+        ${OpenFHE_INCLUDE}/core
+        ${OpenFHE_INCLUDE}/pke
+        ${OpenFHE_INCLUDE}/binfhe)
+    target_link_directories(boot_param_dump_openfhe PRIVATE ${OpenFHE_LIBDIR} ${OPENMP_LIBRARIES})
+    target_link_options(boot_param_dump_openfhe PRIVATE ${OPENFHE_BENCH_CXX_FLAGS_LIST})
+    if(UNIX AND NOT APPLE)
+        target_link_options(boot_param_dump_openfhe PRIVATE -Wl,--no-as-needed)
+    endif()
+    target_link_libraries(boot_param_dump_openfhe ${OpenFHE_SHARED_LIBRARIES})
+
+    # 부트스트래핑 2단계 — 정밀도 곡선 스크리닝 (조합 1개씩, 증분 CSV).
+    add_executable(boot_bench_openfhe src/boot_bench_openfhe.cpp)
+    target_compile_options(boot_bench_openfhe PRIVATE ${OPENFHE_BENCH_CXX_FLAGS_LIST})
+    target_include_directories(boot_bench_openfhe PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${OPENMP_INCLUDES}
+        ${OpenFHE_INCLUDE}
+        ${OpenFHE_INCLUDE}/third-party/include
+        ${OpenFHE_INCLUDE}/core
+        ${OpenFHE_INCLUDE}/pke
+        ${OpenFHE_INCLUDE}/binfhe)
+    target_link_directories(boot_bench_openfhe PRIVATE ${OpenFHE_LIBDIR} ${OPENMP_LIBRARIES})
+    target_link_options(boot_bench_openfhe PRIVATE ${OPENFHE_BENCH_CXX_FLAGS_LIST})
+    if(UNIX AND NOT APPLE)
+        target_link_options(boot_bench_openfhe PRIVATE -Wl,--no-as-needed)
+    endif()
+    target_link_libraries(boot_bench_openfhe ${OpenFHE_SHARED_LIBRARIES})
+
     # 새 프리셋 후보 key-switch 정밀도 사전 측정 (비밀키 암호화 · rot1 경로).
     add_executable(ksprec_openfhe src/ksprec_openfhe.cpp)
     target_compile_options(ksprec_openfhe PRIVATE ${OPENFHE_BENCH_CXX_FLAGS_LIST})

@@ -1,0 +1,4 @@
+library,logN,numSlots,q0,delta,residual_L,levelBudget_c2s,levelBudget_s2c,boot_depth,dnum,PCount,logQ_boot,logP_boot,logQP_boot,rep,precision_bits,worst_slot_bits,boot_us,level_in,level_out,level_out_expected,magnitude_ratio,setup_us,keygen_us,peak_rss_mb,ok,fail_reason
+lattigo,16,32768,45,40,12,3,3,,,,,,,-1,-1,,,,,,,177921,50557458,12227,0,평가기 생성 실패: Mod1Type 'mod1.CosDiscrete' uses a minimum degree of 2*(K-1) but EvalMod degree is smaller
+lattigo,16,32768,45,40,12,3,3,,,,,,,-1,-1,,,,,,,79443657,54595171,23828,0,warmup 0: 부트 실패: cannot BootstrapMany: initial Q/Scale = 32.000001 < 0.5*Q[0]/MessageRatio = 256.000000
+lattigo,16,32768,45,40,12,3,3,,,,,,,-1,-1,,,,,,,lattigo_na,,,,84808801,59377919,28123,0,warmup 0: 자릿수 이상: max|got|/max|want|=21704310835708278890436234014897121563362452059416173751754525107382028106407528232272506365966098953879661497697519468893045506695106842143095783424.0000

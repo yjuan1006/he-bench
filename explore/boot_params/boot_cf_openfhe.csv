@@ -1,0 +1,6 @@
+logN,numSlots,q0,delta,q0_minus_delta,correctionFactor_runtime,deg_runtime,guard_violated,setup_threw,err
+16,32768,60,50,10,7,10,1,0,
+16,32768,60,52,8,7,8,1,0,
+16,32768,60,53,7,7,7,0,0,
+16,32768,60,55,5,7,5,0,0,
+16,32768,60,60,0,0,0,0,1,/data/yja/openfhe-src/src/pke/lib/scheme/gen-cryptocontext-params-validation.cpp:l.74:validateParametersForCryptocontext(): scalingModSize should be at least 14 and less than 60

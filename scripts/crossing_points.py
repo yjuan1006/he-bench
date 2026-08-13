@@ -25,6 +25,9 @@ DRIFT = 0.02  # 실행 간 변동 바닥
 
 # 이 스크립트가 읽는 CSV의 위치. 스크립트가 scripts/ 로 내려갔으므로 CWD 상대 경로를
 # 쓰면 어디서 실행하느냐에 따라 깨진다 → 항상 리포 루트 기준으로 해석한다.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import respath  # noqa: E402  (경로 해석 — scripts/respath.py)
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # 구 프리셋(v1) 측정본은 2026-08-01 구조 개편에서 archive/v1/results/ 로 옮겼다.
 # 새 프리셋 측정본을 볼 때는 RESULTS_DIR 환경변수로 덮어쓴다.
@@ -69,7 +72,7 @@ GC_OPS = {"add_cc", "add_cp", "mul_cp", "mul_cc"}
 
 def load_v3(prefix, mode):
     """{(library, op): {level: mean_us}} 로 읽는다."""
-    path = os.path.join(ROOT, f"{prefix}_timing_{mode}_dku16c.csv")
+    path = respath.find(f"{prefix}_timing_{mode}_dku16c.csv")
     out = {}
     with open(path) as fh:
         for r in csv.DictReader(fh):

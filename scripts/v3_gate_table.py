@@ -22,6 +22,9 @@ import sys
 import numpy as np
 import pandas as pd
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import respath  # noqa: E402  (경로 해석 — scripts/respath.py)
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # 프리셋 식별자를 인자로 받는다. A/B/C 를 같은 게이트·같은 표로 본다.
 #   A: v3n15d42L12   (logN15 Δ42 depth12)
@@ -92,11 +95,11 @@ def crossings(num, den, scale=1.0):
 
 
 def main():
-    t = pd.read_csv(os.path.join(ROOT, f"results_{PRESET}_timing_1t_dku16c.csv"))
+    t = pd.read_csv(respath.find(f"results_{PRESET}_timing_1t_dku16c.csv"))
     if len(t[t.ok != 1]):
         print(f"※ 컨텍스트 생성 실패 {len(t[t.ok != 1])}건")
     t = t[t.ok == 1].copy()
-    p = pd.read_csv(os.path.join(ROOT, f"results_{PRESET}_precision_1t_dku16c.csv"))
+    p = pd.read_csv(respath.find(f"results_{PRESET}_precision_1t_dku16c.csv"))
 
     print("=== 구성 (런타임 API 추출) ===")
     cfg = t.groupby("library").first()[["dnum", "PCount", "logP", "logQ", "logQP",

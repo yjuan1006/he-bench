@@ -14,6 +14,9 @@
 set -u
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$HERE/.." && pwd)"
+# 산출물 목적지 규칙 (2026-08-08 results/ 트리 개편) — scripts/respath.sh
+# shellcheck source=respath.sh
+source "$HERE/respath.sh"
 cd "$ROOT"
 
 export LD_LIBRARY_PATH="/data/yja/openfhe-install/lib:${LD_LIBRARY_PATH:-}"
@@ -67,9 +70,9 @@ merge() {   # dest  src...
   echo "  $dest  ($(( $(wc -l < "$dest") - 1 ))행)"
 }
 echo "### 병합"
-merge "$ROOT/results_${PRESET}_timing_1t_dku16c.csv" \
+merge "$(res_out "$ROOT" "results_${PRESET}_timing_1t_dku16c.csv")" \
       "$RAW/openfhe.csv" "$RAW/lattigo.csv" "$RAW/seal.csv"
-merge "$ROOT/results_${PRESET}_precision_1t_dku16c.csv" \
+merge "$(res_out "$ROOT" "results_${PRESET}_precision_1t_dku16c.csv")" \
       "$RAW/openfhe_prec.csv" "$RAW/lattigo_prec.csv" "$RAW/seal_prec.csv"
 
 echo "MAIN_V2_DONE fail=$fail"
