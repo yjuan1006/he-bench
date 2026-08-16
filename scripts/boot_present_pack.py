@@ -180,6 +180,44 @@ def main():
         w(f"dnum {lo} → {hi} (**{hi / lo:.1f}배**) 에 부트 **{rb:.2f}배** — "
           f"비용 지수 **{expo:.2f}** (선형이면 1.0).\n")
 
+    # ---- 6b. 속도·정밀도 격차 분해 ---------------------------------------
+    w("## 6b. 격차 정량 분해 (진단, BT2 1t {3,3})\n")
+    w("⚠️ **진단 목적 단발 측정. 프리셋 후보가 아니다** — `SPARSE_TERNARY` 는 메인키가")
+    w("H=192 sparse 라 Table 5.2(uniform ternary) 를 적용할 수 없다.\n")
+    dg = pd.read_csv(respath.find("boot_prec_openfhe_diag_skdist_1t_dku16c.csv"))
+    dg = dg[dg.rep >= 0]
+    mu = main_df("openfhe", "1t")
+    mu = mu[(mu.delta == 58) & (mu.levelBudget_c2s == 3) & (mu.levelBudget_s2c == 3)]
+    ml = main_df("lattigo", "1t")
+    ml = ml[(ml.delta == 58) & (ml.levelBudget_c2s == 3) & (ml.levelBudget_s2c == 3)]
+    w("| | boot_depth | dnum | PCount | logP | logQP(여유) | 부트 s ±σ | 정밀도 | keygen | RSS |")
+    w("|---|---:|---:|---:|---:|---:|---|---:|---:|---:|")
+    for nm, g in (("OpenFHE `UNIFORM_TERNARY` (본측정)", mu),
+                  ("OpenFHE `SPARSE_TERNARY` (진단)", dg),
+                  ("Lattigo (본측정)", ml)):
+        qp = int(g.logQP_boot.iloc[0])
+        w(f"| {nm} | {int(g.boot_depth.iloc[0])} | {int(g.dnum.iloc[0])} | "
+          f"{int(g.PCount.iloc[0])} | {int(g.logP_boot.iloc[0])} | {qp} ({1747 - qp}) | "
+          f"**{g.boot_us.mean() / 1e6:.2f}** ±{g.boot_us.std() / 1e6:.2f} | "
+          f"{g.precision_bits.mean():.3f} | {g.keygen_us.mean() / 1e6:.1f}s | "
+          f"{g.peak_rss_mb.max() / 1024:.1f} GB |")
+    bu, bs, bl = (mu.boot_us.mean() / 1e6, dg.boot_us.mean() / 1e6, ml.boot_us.mean() / 1e6)
+    pu, ps, pl = (mu.precision_bits.mean(), dg.precision_bits.mean(), ml.precision_bits.mean())
+    w("")
+    w("| 항목 | 속도 | 정밀도 |")
+    w("|---|---|---|")
+    w(f"| 총 격차 | **{bu - bl:.2f}초** ({bu / bl:.2f}배) | **{pl - pu:.3f}비트** |")
+    w(f"| 설명되는 것 (**상한**) | {bu - bs:.2f}초 = **{(bu - bs) / (bu - bl) * 100:.0f}%** | "
+      f"+{ps - pu:.3f}비트 = **{(ps - pu) / (pl - pu) * 100:.0f}%** |")
+    w(f"| **잔차 (미규명)** | **{bs - bl:.2f}초 = {(bs - bl) / (bu - bl) * 100:.0f}%** "
+      f"(여전히 {bs / bl:.2f}배) | **{pl - ps:.3f}비트** |")
+    w("")
+    w("**dnum 을 7 로 고정**해 교란 하나를 제거했다. 남는 교란 셋은 `boot_depth` 20→16 ·")
+    w("`sizeQ` 25→21 · `PCount`/`logP` 4/240→3/180 이고 **전부 빠르게 하는 방향**이라 상한이다.")
+    w("⚠️ **\"구현 품질 차이\" 로 설명하지 않는다** — 우리는 그것을 잰 적이 없다.")
+    w("⚠️ **이 진단은 한쪽에서만 가능하다.** OpenFHE 는 sparse 로 내려 잴 수 있으나,")
+    w("Lattigo 는 캡슐화 off 가 동작하지 않아(9조합 전수 실패) dense 로 올려 잴 수 없다.\n")
+
     # ---- 7. 규칙 이전 대조 ------------------------------------------------
     w("## 7. 8-op ↔ 부트 규칙 이전 대조\n")
     w("| 규칙 | 8-op 에서 | 부트에서 | 판정 |")
