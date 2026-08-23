@@ -53,10 +53,49 @@ static pair<double, double> measure(int reps, int warmup, const function<void()>
     return {mean, sd};
 }
 
+// 파괴적(in-place) 연산용 배치 계측 — presetsearch_openfhe.cpp 와 동일 규약.
+// 타이머 밖에서 K개 사본을 준비(reset)하고 타이머 안에서 K회 수행(runK)한 뒤 K로 나눈다.
+// ⚠️ rep 값이 "K회 평균"이라 std 의 의미가 단발 계측과 다르다(CSV rep_mode 열로 구분).
+static pair<double, double> measure_batch(int reps, int warmup, int K,
+                                          const function<void()>& reset,
+                                          const function<void()>& runK)
+{
+    for (int i = 0; i < warmup; i++) { reset(); runK(); }
+    vector<double> ts(reps);
+    for (int i = 0; i < reps; i++) {
+        reset();
+        auto t0 = chrono::steady_clock::now();
+        runK();
+        auto t1 = chrono::steady_clock::now();
+        ts[i] = chrono::duration<double, nano>(t1 - t0).count() / 1000.0 / K;
+    }
+    double sum = 0;
+    for (double x : ts) sum += x;
+    double mean = sum / reps, sd = 0.0;
+    if (reps > 1) {
+        double ss = 0;
+        for (double x : ts) { double d = x - mean; ss += d * d; }
+        sd = sqrt(ss / (reps - 1));
+    }
+    return {mean, sd};
+}
+
+static int batch_k_for(int logN, int level, long budget_bytes, int kmax)
+{
+    const double ct_bytes = 2.0 * (level + 1) * (double)(1u << logN) * 8.0;
+    int k = (int)(budget_bytes / ct_bytes);
+    if (k < 4) k = 4;
+    if (k > kmax) k = kmax;
+    return k;
+}
+
 int main(int argc, char** argv)
 {
     int expSel = 1, reps = 30, warmup = 3, precreps = 5;
     string out = "timing.csv", precout = "precision.csv", spec, thlabel = "1t";
+    string verifyout = "";
+    long batchbudget = 64L * 1024 * 1024;
+    int  batchkmax = 2048;
     for (int i = 1; i < argc; i++) {
         string a = argv[i];
         if (a == "-exp" && i + 1 < argc) expSel = stoi(argv[++i]);
@@ -68,6 +107,11 @@ int main(int argc, char** argv)
         else if (a == "-mainrun" && i + 1 < argc) { spec = argv[++i]; expSel = 7; }
         // -hexlrun "logN:depth:delta" → HEXL 아암 최소 규모 (exp 8)
         else if (a == "-hexlrun" && i + 1 < argc) { spec = argv[++i]; expSel = 8; }
+        // -leveldrop "logN:depth:delta" → 순수 레벨 강하 전용 (exp 9). 8-op 경로와 분리.
+        else if (a == "-leveldrop" && i + 1 < argc) { spec = argv[++i]; expSel = 9; }
+        else if (a == "-verifyout" && i + 1 < argc) verifyout = argv[++i];
+        else if (a == "-batchbudget" && i + 1 < argc) batchbudget = stol(argv[++i]);
+        else if (a == "-batchkmax" && i + 1 < argc) batchkmax = stoi(argv[++i]);
         else if (a == "-threads" && i + 1 < argc) thlabel = argv[++i];
     }
 
@@ -95,6 +139,15 @@ int main(int argc, char** argv)
         logN = ln; depth = dp; deltas = {dl};
         levels = {depth, depth / 2, 1};
         ops = {"mul_cc_rlk", "relin", "rot1"};
+    } else if (expSel == 9) {
+        // 순수 레벨 강하 전용. 기존 8-op 경로는 건드리지 않는다.
+        int ln = 0, dp = 0, dl = 0;
+        if (sscanf(spec.c_str(), "%d:%d:%d", &ln, &dp, &dl) != 3) {
+            cerr << "-leveldrop 파싱 실패: " << spec << "\n"; return 2;
+        }
+        logN = ln; depth = dp; deltas = {dl};
+        for (int L = depth; L >= 1; L--) levels.push_back(L);
+        ops = {"leveldrop", "leveldrop_ip", "leveldrop_oop", "clone_only"};
     } else if (expSel == 7) {
         int ln = 0, dp = 0, dl = 0;
         if (sscanf(spec.c_str(), "%d:%d:%d", &ln, &dp, &dl) != 3) {
@@ -121,7 +174,14 @@ int main(int argc, char** argv)
     const int nthreads = 1;
     cerr << "[seal] threads=" << thlabel << " (SEAL 내부 병렬화 없음 → 실사용 1)\n";
     csv << "library,exp,logN,q0,delta,depth,dnum,PCount,logP,logQ,logQP,bound,margin,"
-           "maxLevel,level,op,mean_us,std_us,reps,digits,threads,nthreads,ok,err\n";
+           "maxLevel,level,op,mean_us,std_us,reps,digits,threads,nthreads,ok,err"
+        << (expSel == 9 ? ",batch_k,rep_mode\n" : "\n");
+    ofstream vcsv;
+    if (expSel == 9 && !verifyout.empty()) {
+        vcsv.open(verifyout);
+        vcsv << "library,logN,depth,delta,dnum,level,level_before,level_after,"
+                "scale_before,scale_after,scale_ratio,max_abs_diff,bits_before,bits_after,ok\n";
+    }
     csv << fixed;
     const bool wantPrec = (expSel == 1 || expSel == 3 || expSel == 5 || expSel == 7 || expSel == 8);
     if (wantPrec) {
@@ -183,6 +243,101 @@ int main(int argc, char** argv)
         const double scale = pow(2.0, delta);
         const size_t slots = encoder.slot_count();
         vector<double> msg(slots, 0.5);
+
+        // ══════════════════════════════════════════════════════════════════
+        // exp 9 — 순수 레벨 강하(leveldrop). 아래 기존 8-op 루프는 건드리지 않는다.
+        //
+        // rescale 과 다른 함수다(소스 확인, evaluator.cpp:1382-1414):
+        //   rescale_to_next   → mod_switch_scale_to_next  (모듈러스 버리고 **스케일도 나눔**)
+        //   mod_switch_to_next→ mod_switch_drop_to_next   ("Modulus switching without scaling",
+        //                        evaluator.cpp:1343 에서 destination.scale() = encrypted.scale())
+        // ⚠️ SEAL 은 "몇 레벨 내릴지" 인자가 없다 — 1단계 고정이다(mod_switch_to 로 parms_id 를
+        //    지정하는 별도 함수가 여러 단계를 담당한다).
+        // ⚠️ SEAL 의 in-place 는 out-of-place 보다 **비싸다**: 같은 버퍼면 임시 공간을 잡고
+        //    두 번 복사한다(evaluator.cpp:1319-1332, 소스에 TODO 로 명시). O(1) 강하가 없다.
+        if (expSel == 9) {
+            vector<double> xv, yv;
+            precision_common::make_inputs(slots, xv, yv);
+            Decryptor decryptor(ctx, sk);
+            auto dec = [&](const Ciphertext& z) {
+                Plaintext r; decryptor.decrypt(z, r);
+                vector<double> v; encoder.decode(r, v); v.resize(slots); return v;
+            };
+            for (int L : levels) {
+                auto cd = ctx.first_context_data();
+                while (cd->chain_index() > size_t(L)) cd = cd->next_context_data();
+                Plaintext ptx; encoder.encode(xv, scale, ptx);
+                Ciphertext ct; encryptor.encrypt(ptx, ct);
+                evaluator.mod_switch_to_inplace(ct, cd->parms_id());
+
+                // ---- 검증: 레벨 -1, 스케일 보존, 복호값 불변 ----
+                const size_t lvB = ctx.get_context_data(ct.parms_id())->chain_index();
+                const double sfB = ct.scale();
+                vector<double> vB = dec(ct);
+                Ciphertext ctD;
+                evaluator.mod_switch_to_next(ct, ctD);
+                const size_t lvA = ctx.get_context_data(ctD.parms_id())->chain_index();
+                const double sfA = ctD.scale();
+                vector<double> vA = dec(ctD);
+                double mx = 0.0;
+                for (size_t i = 0; i < slots; i++) mx = max(mx, fabs(vB[i] - vA[i]));
+                const bool okLv = (lvA + 1 == lvB);
+                const double bitsB = precision_common::precision_bits(vB, xv);
+                const double bitsA = precision_common::precision_bits(vA, xv);
+                if (!okLv)
+                    cerr << "  !! L=" << L << " 레벨이 1 줄지 않았다 (" << lvB << " -> " << lvA << ")\n";
+                if (vcsv.is_open())
+                    vcsv << "seal," << logN << "," << depth << "," << delta << "," << dnum << ","
+                         << L << "," << lvB << "," << lvA << ","
+                         << setprecision(17) << sfB << "," << sfA << ","
+                         << (sfB > 0 ? sfA / sfB : 0.0) << ","
+                         << setprecision(6) << mx << "," << bitsB << "," << bitsA << ","
+                         << (okLv ? 1 : 0) << "\n";
+                csv << setprecision(3);
+
+                const auto emit = [&](const char* op, pair<double,double> r, int bk, const char* rm) {
+                    csv << "seal," << expSel << "," << logN << "," << q0 << "," << delta << ","
+                        << depth << "," << dnum << "," << pCount << "," << logP << "," << logQ
+                        << "," << logQP << "," << bound << "," << margin << "," << depth << ","
+                        << L << "," << op << "," << r.first << "," << r.second << "," << reps
+                        << "," << digits << "," << thlabel << "," << nthreads << ",1,,"
+                        << bk << "," << rm << "\n";
+                };
+
+                // ---- 계측 1: out-of-place. SEAL 의 표준형이자 **가장 싼** 강하 방법이다 ----
+                Ciphertext dstD;
+                auto rOop = measure(reps, warmup, [&]{ evaluator.mod_switch_to_next(ct, dstD); });
+
+                // ---- 계측 2(분해용): 암호문 깊은 복사만 ----
+                Ciphertext dstC;
+                auto rCl = measure(reps, warmup, [&]{ dstC = ct; });
+
+                // ---- 계측 3: in-place. 파괴적이라 K개 사본을 타이머 밖에서 준비한다 ----
+                const int K = batch_k_for(logN, L, batchbudget, batchkmax);
+                vector<Ciphertext> pool(K);
+                auto reset = [&]{ for (int i = 0; i < K; i++) pool[i] = ct; };
+                auto runK  = [&]{ for (int i = 0; i < K; i++) evaluator.mod_switch_to_next_inplace(pool[i]); };
+                auto rIp = measure_batch(reps, warmup, K, reset, runK);
+                if (ctx.get_context_data(pool[0].parms_id())->chain_index() + 1 != lvB)
+                    cerr << "  !! L=" << L << " in-place 강하가 레벨을 바꾸지 않았다\n";
+
+                // SEAL 은 O(1) 강하가 없고 in-place 가 오히려 더 비싸다(임시 버퍼 + 2회 복사)
+                // → **out-of-place 가 가장 싼 방법**이므로 leveldrop == leveldrop_oop.
+                emit("leveldrop", rOop, 1, "single");
+                emit("leveldrop_ip", rIp, K, "batch");
+                emit("leveldrop_oop", rOop, 1, "single");
+                emit("clone_only", rCl, 1, "single");
+                csv.flush();
+                if (vcsv.is_open()) vcsv.flush();
+                cerr << "  L=" << L << " leveldrop(oop)=" << rOop.first << "us"
+                     << " ip=" << rIp.first << "us(K=" << K << ")"
+                     << " clone=" << rCl.first << "us"
+                     << " lv " << lvB << "->" << lvA
+                     << " scale " << (sfB > 0 ? sfA / sfB : 0.0)
+                     << " maxdiff " << mx << "\n";
+            }
+            continue;   // 기존 8-op 루프·정밀도 블록을 건너뛴다
+        }
 
         for (int L : levels) {
             auto cd = ctx.first_context_data();
@@ -268,6 +423,7 @@ int main(int argc, char** argv)
     }
     csv.close();
     if (pcsv.is_open()) pcsv.close();
+    if (vcsv.is_open()) vcsv.close();
     cerr << "wrote " << out << "\n";
     return 0;
 }

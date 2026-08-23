@@ -99,6 +99,50 @@ func measure(reps, warmup int, fn func() error) (float64, float64) {
 	return mean, sd
 }
 
+// measureBatch — 파괴적(in-place) 연산용 배치 계측. presetsearch_openfhe.cpp 와 동일 규약.
+// 타이머 밖에서 K개 사본을 준비(reset)하고 타이머 안에서 K회 수행(runK)한 뒤 K로 나눈다.
+// ⚠️ rep 값이 "K회 평균"이라 std 의 의미가 단발 계측과 다르다(CSV rep_mode 열로 구분).
+func measureBatch(reps, warmup, K int, reset func(), runK func()) (float64, float64) {
+	for i := 0; i < warmup; i++ {
+		reset()
+		runK()
+	}
+	ts := make([]float64, reps)
+	for i := 0; i < reps; i++ {
+		reset()
+		t0 := time.Now()
+		runK()
+		ts[i] = float64(time.Since(t0).Nanoseconds()) / 1000.0 / float64(K)
+	}
+	sum := 0.0
+	for _, v := range ts {
+		sum += v
+	}
+	mean := sum / float64(reps)
+	sd := 0.0
+	if reps > 1 {
+		ss := 0.0
+		for _, v := range ts {
+			ss += (v - mean) * (v - mean)
+		}
+		sd = math.Sqrt(ss / float64(reps-1))
+	}
+	return mean, sd
+}
+
+// 배치 크기 — 암호문 1개의 바이트 수로 상한을 건다(logN15·L12 는 1개가 ~6.8MB).
+func batchKFor(logN, level int, budgetBytes int64, kmax int) int {
+	ctBytes := 2.0 * float64(level+1) * float64(int64(1)<<uint(logN)) * 8.0
+	k := int(float64(budgetBytes) / ctBytes)
+	if k < 4 {
+		k = 4
+	}
+	if k > kmax {
+		k = kmax
+	}
+	return k
+}
+
 type cfg struct {
 	delta  int
 	pcount int
@@ -115,6 +159,10 @@ func main() {
 	precout := flag.String("precout", "precision.csv", "정밀도 CSV")
 	combos := flag.String("combos", "", "\"logN:depth:delta:pcount,...\" — 지정 시 maxLevel 한 점 heavy 3종")
 	mainrun := flag.String("mainrun", "", "\"logN:depth:delta:pcount\" — 레벨 전수 · 8-op · 정밀도")
+	leveldrop := flag.String("leveldrop", "", "\"logN:depth:delta:pcount\" — 순수 레벨 강하 전용 (exp 9)")
+	verifyout := flag.String("verifyout", "", "exp 9 검증 CSV")
+	batchbudget := flag.Int64("batchbudget", 64*1024*1024, "in-place 배치 메모리 예산(바이트)")
+	batchkmax := flag.Int("batchkmax", 2048, "in-place 배치 최대 K")
 	thlabel := flag.String("threads", "1t", "스레드 조건 라벨 (기록용)")
 	flag.Parse()
 	if *combos != "" {
@@ -122,6 +170,9 @@ func main() {
 	}
 	if *mainrun != "" {
 		*expSel = 7
+	}
+	if *leveldrop != "" {
+		*expSel = 9
 	}
 
 	const q0 = 15*0 + 60
@@ -144,6 +195,18 @@ func main() {
 		}
 		levels = []int{13}
 		ops = []string{"add_cc", "add_cp", "mul_cp", "mul_cc", "mul_cc_rlk", "relin", "rescale", "rot1"}
+	} else if *expSel == 9 {
+		// 순수 레벨 강하 전용. 기존 8-op 경로는 건드리지 않는다.
+		var ln, dp, dl, pc int
+		if _, err := fmt.Sscanf(strings.TrimSpace(*leveldrop), "%d:%d:%d:%d", &ln, &dp, &dl, &pc); err != nil {
+			fmt.Fprintf(os.Stderr, "-leveldrop 파싱 실패: %s\n", *leveldrop)
+			os.Exit(2)
+		}
+		cfgs = append(cfgs, cfg{dl, pc, ln, dp})
+		for L := dp; L >= 1; L-- {
+			levels = append(levels, L)
+		}
+		ops = []string{"leveldrop", "leveldrop_ip", "leveldrop_oop", "clone_only"}
 	} else if *expSel == 7 {
 		var ln, dp, dl, pc int
 		if _, err := fmt.Sscanf(strings.TrimSpace(*mainrun), "%d:%d:%d:%d", &ln, &dp, &dl, &pc); err != nil {
@@ -203,8 +266,22 @@ func main() {
 	nthreads := runtime.GOMAXPROCS(0)
 	fmt.Fprintf(os.Stderr, "[lattigo] threads=%s GOMAXPROCS=%d NumCPU=%d (op 내부 병렬화 없음)\n",
 		*thlabel, nthreads, runtime.NumCPU())
-	fmt.Fprintln(fo, "library,exp,logN,q0,delta,depth,dnum,PCount,logP,logQ,logQP,bound,margin,"+
-		"maxLevel,level,op,mean_us,std_us,reps,digits,threads,nthreads,ok,err")
+	hdr := "library,exp,logN,q0,delta,depth,dnum,PCount,logP,logQ,logQP,bound,margin," +
+		"maxLevel,level,op,mean_us,std_us,reps,digits,threads,nthreads,ok,err"
+	if *expSel == 9 {
+		hdr += ",batch_k,rep_mode"
+	}
+	fmt.Fprintln(fo, hdr)
+	var fv *os.File
+	if *expSel == 9 && *verifyout != "" {
+		fv, err = os.Create(*verifyout)
+		if err != nil {
+			panic(err)
+		}
+		defer fv.Close()
+		fmt.Fprintln(fv, "library,logN,depth,delta,dnum,level,level_before,level_after,"+
+			"scale_before,scale_after,scale_ratio,max_abs_diff,bits_before,bits_after,ok")
+	}
 	var fp *os.File
 	wantPrec := *expSel == 1 || *expSel == 3 || *expSel == 5 || *expSel == 7
 	if wantPrec {
@@ -302,6 +379,121 @@ func main() {
 		values := make([]float64, slots)
 		for i := range values {
 			values[i] = 0.5
+		}
+
+		// ══════════════════════════════════════════════════════════════════
+		// exp 9 — 순수 레벨 강하(leveldrop). 아래 기존 8-op 루프는 건드리지 않는다.
+		//
+		// Rescale 과 다른 함수다(소스 확인, v6.2.0):
+		//   Rescale   — 마지막 소수로 나눈다(스케일 변함)
+		//   DropLevel — schemes/ckks/evaluator.go:466-469 주석 "No rescaling is applied
+		//               during this procedure". 구현은 op0.Resize(deg, level-levels) →
+		//               ring/poly.go:48 `pol.Coeffs = pol.Coeffs[:level+1]` = **슬라이스 절단**.
+		//               ct.Scale 은 손대지 않는다.
+		//   DropLevelNew — CopyNew(전체 깊은 복사) 후 DropLevel.
+		// ⚠️ 따라서 Lattigo 의 in-place 강하는 산술이 전혀 없는 O(1) 연산이다.
+		//    OpenFHE(타워 해제) · SEAL(잔여 타워 복사) 과 **작업량이 대응하지 않는다**.
+		if *expSel == 9 {
+			x, _ := makeInputs(slots)
+			dec9 := ckks.NewDecryptor(params, sk)
+			decode := func(ct *rlwe.Ciphertext) []float64 {
+				pp := dec9.DecryptNew(ct)
+				v := make([]float64, slots)
+				if err := ecd.Decode(pp, v); err != nil {
+					panic(err)
+				}
+				return v
+			}
+			for _, L := range levels {
+				ptx := ckks.NewPlaintext(params, L)
+				if err := ecd.Encode(x, ptx); err != nil {
+					panic(err)
+				}
+				ct, err := enc.EncryptNew(ptx)
+				if err != nil {
+					panic(err)
+				}
+
+				// ---- 검증: 레벨 -1, 스케일 보존, 복호값 불변 ----
+				lvB := ct.Level()
+				sfB, _ := ct.Scale.Value.Float64()
+				vB := decode(ct)
+				ctD := eval.DropLevelNew(ct, 1)
+				lvA := ctD.Level()
+				sfA, _ := ctD.Scale.Value.Float64()
+				vA := decode(ctD)
+				mx := 0.0
+				for i := range vB {
+					if d := math.Abs(vB[i] - vA[i]); d > mx {
+						mx = d
+					}
+				}
+				okLv := lvA+1 == lvB
+				if !okLv {
+					fmt.Fprintf(os.Stderr, "  !! L=%d 레벨이 1 줄지 않았다 (%d -> %d)\n", L, lvB, lvA)
+				}
+				bitsB, bitsA := precisionBits(vB, x), precisionBits(vA, x)
+				ratio := 0.0
+				if sfB > 0 {
+					ratio = sfA / sfB
+				}
+				okN := 0
+				if okLv {
+					okN = 1
+				}
+				if fv != nil {
+					fmt.Fprintf(fv, "lattigo,%d,%d,%d,%d,%d,%d,%d,%.17g,%.17g,%.17g,%.6g,%.4f,%.4f,%d\n",
+						logN, depth, c.delta, dnum, L, lvB, lvA, sfB, sfA, ratio, mx, bitsB, bitsA, okN)
+				}
+
+				emit := func(op string, m, sd float64, bk int, rm string) {
+					fmt.Fprintf(fo, "lattigo,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s,%.3f,%.3f,%d,%s,%s,%d,1,,%d,%s\n",
+						*expSel, logN, q0, c.delta, depth, dnum, len(pm), sumP, sumQ, logQP,
+						bound, margin, maxLevel, L, op, m, sd, *reps, digits, *thlabel, nthreads, bk, rm)
+				}
+
+				// ---- 계측 1: out-of-place (DropLevelNew = CopyNew + 절단) ----
+				mOop, sOop := measure(*reps, *warmup, func() error {
+					eval.DropLevelNew(ct, 1)
+					return nil
+				})
+				// ---- 계측 2(분해용): CopyNew 만 ----
+				mCl, sCl := measure(*reps, *warmup, func() error {
+					ct.CopyNew()
+					return nil
+				})
+				// ---- 계측 3: in-place = Lattigo 가 레벨을 내리는 가장 싼 방법(O(1) 절단).
+				//   파괴적이라 타이머 밖에서 K개 사본을 만들고 타이머 안에서 K회 수행한다.
+				K := batchKFor(logN, L, *batchbudget, *batchkmax)
+				pool := make([]*rlwe.Ciphertext, K)
+				reset := func() {
+					for i := 0; i < K; i++ {
+						pool[i] = ct.CopyNew()
+					}
+				}
+				runK := func() {
+					for i := 0; i < K; i++ {
+						eval.DropLevel(pool[i], 1)
+					}
+				}
+				mIp, sIp := measureBatch(*reps, *warmup, K, reset, runK)
+				if pool[0].Level()+1 != lvB {
+					fmt.Fprintf(os.Stderr, "  !! L=%d in-place 강하가 레벨을 바꾸지 않았다\n", L)
+				}
+
+				// Lattigo 는 in-place 가 가장 싸다(O(1) 절단) → leveldrop == leveldrop_ip.
+				emit("leveldrop", mIp, sIp, K, "batch")
+				emit("leveldrop_ip", mIp, sIp, K, "batch")
+				emit("leveldrop_oop", mOop, sOop, 1, "single")
+				emit("clone_only", mCl, sCl, 1, "single")
+				fo.Sync()
+				if fv != nil {
+					fv.Sync()
+				}
+				fmt.Fprintf(os.Stderr, "  L=%d leveldrop=%.4fus(K=%d) oop=%.3fus clone=%.3fus lv %d->%d scale %.g maxdiff %.3g\n",
+					L, mIp, K, mOop, mCl, lvB, lvA, ratio, mx)
+			}
+			continue // 기존 8-op 루프·정밀도 블록을 건너뛴다
 		}
 
 		for _, L := range levels {

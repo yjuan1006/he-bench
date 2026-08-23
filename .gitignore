@@ -22,6 +22,7 @@ seal_precision
 openfhe_precision
 param_dump_openfhe
 boot_param_dump_openfhe
+boot_bench_openfhe
 ksprec_openfhe
 ksprec_seal
 presetsearch_openfhe
