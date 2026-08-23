@@ -1,0 +1,5 @@
+library,logN,depth,delta,dnum,level,level_before,level_after,scale_before,scale_after,scale_ratio,max_abs_diff,bits_before,bits_after,ok
+lattigo,14,4,42,2,4,4,3,4398046511104,4398046511104,1,0,31.0677,31.0677,1
+lattigo,14,4,42,2,3,3,2,4398046511104,4398046511104,1,0,31.1034,31.1034,1
+lattigo,14,4,42,2,2,2,1,4398046511104,4398046511104,1,0,31.0890,31.0890,1
+lattigo,14,4,42,2,1,1,0,4398046511104,4398046511104,1,0,31.1126,31.1126,1
