@@ -1802,3 +1802,88 @@ Lattigo 에서 캡슐화 off 는 9조합 전수 실패했다(§10.7-17). 즉 대
 | 9 | **`lattice-estimator` 로 실제 보안 비트 미산정.** 전 판정이 Table 5.2 **상한 조회**뿐이다 | 미실시 | §10.9-3 |
 | 10 | **116비트 위 sparse 임시키의 보안.** BTH22 가 논증했을 것이나 검증 수단 없음(Lattice Estimator sparse 미지원) | 검증 불가 | §10.7.1 |
 | 11 | **sparse 아암 · 부분 슬롯 아암 미착수** | 미실시 | §10.9-4·9 |
+
+---
+
+## 11. leveldrop(순수 레벨 강하) 측정 — 4.3절 근거 (2026-08-23)
+
+### 11.1 언제·왜 측정했나
+
+5절(레벨 하강 배치 규칙)의 정지 조건 서술은 "연산을 낮은 레벨로 옮기는 것 자체의 비용은
+무시 가능하다"는 전제 위에 있었으나, 기존 8-op 세트(add_cc/add_cp/mul_cp/mul_cc/mul_cc_rlk/
+relin/rescale/rot1)에는 **재스케일 없는 순수 레벨 강하** 연산이 없어 이 전제가 검증되지
+않은 채였다. 2026-08-19에 `presetsearch_{openfhe,seal,lattigo}` exp 9(`-leveldrop`)로
+A~D·1t·레벨전수·reps30 측정했고, 2026-08-23에 그 원자료를 재구성해 4.3절 수치를 확정했다.
+측정 프로토콜(코어 고정·30초 가열·전후 DVFS 프로브·reps30)은 §4의 8-op 본측정과 동일하다 —
+**단, 계측 방식은 다르다(§11.3).**
+
+### 11.2 4종 변종과 정본
+
+| op | 뜻 |
+|---|---|
+| **`leveldrop_ip`(정본)** | 제자리(파괴적) 강하. OpenFHE `LevelReduceInPlace`, Lattigo `DropLevel`, SEAL `mod_switch_to_next_inplace` |
+| `leveldrop_oop`(보조) | 새 암호문 반환. OpenFHE `LevelReduce`, Lattigo `DropLevelNew`, SEAL `mod_switch_to_next` |
+| `clone_only`(보조, openfhe·seal만) | 깊은 복사만(강하 없음) — `oop − clone_only` 분해용 |
+| `leveldrop`(폐기) | "라이브러리별 가장 싼 정당한 형태" 자동선택(openfhe·lattigo=ip, seal=oop) — 라이브러리마다 다른 형태를 섞은 혼합 지표라 폐기 |
+
+**정본이 `leveldrop_ip`인 이유**: 5절이 서술하는 배치 최적화기는 실제로 **제자리 강하**를
+수행하지 새 암호문을 만드는 복사를 수행하지 않는다. `leveldrop_oop`는 세 라이브러리 작업량이
+서로 대응(모두 "새 암호문 하나 생성")하므로 자릿수 비교의 보조 지표로만 남긴다.
+**Lattigo는 `leveldrop_oop`·`clone_only`를 어떤 통계에도 쓰지 않는다** — 값의 부호조차
+불안정하다(oop−clone이 −293~+1278μs로 흔들림, §11.5의 재실행 불안정성과 같은 원인).
+
+세 라이브러리 API 근거(파일:라인, 직접 확인):
+- OpenFHE `LevelReduceInternalInPlace` — `openfhe-src/src/pke/lib/scheme/ckksrns/ckksrns-leveledshe.cpp:197-201`. `DropLastElements`+`SetLevel`만, `SetScalingFactor` 없음.
+- SEAL `mod_switch_to_next`(CKKS 분기) → `mod_switch_drop_to_next` — `third_party/SEAL/src/native/src/seal/evaluator.cpp:1382-1408`(분기 1405). BFV/BGV만 `mod_switch_scale_to_next`.
+- Lattigo `DropLevel` — `schemes/ckks/evaluator.go:459-469` (lattigo v6.2.0). `op0.Resize(degree, level-levels)` 뿐.
+
+### 11.3 batch_k 상각 프로토콜 — 8-op 단발 계측과 다르다, 병합 금지
+
+8-op은 "연산 1회 단발 계측 × reps 30". `leveldrop_ip`는 **파괴적**이라 같은 암호문에 반복 적용할
+수 없어, 타이머 밖에서 K개 사본을 만들고(`reset()`) 타이머 안에서 K회 수행한 뒤(`runK()`) K로
+나누는 **상각 계측**을 쓴다(`batchKFor`, `src/presetsearch_lattigo.go:133-142`; 예산 64MiB,
+K 범위 실측 9~128). CSV 스키마에 `rep_mode`(single/batch)·`batch_k`(K값) 2열이 추가된다.
+`rep_mode=batch` 행의 `std_us`는 "K개 평균"의 rep간 산포라 단발 계측의 표준편차와 의미가
+다르다(약 1/√K로 작게 보임) — **8-op 표와 leveldrop 표의 값·σ를 같은 표에 나란히 놓지 않는다.**
+
+Lattigo `leveldrop_ip` 실측값(23~121ns)은 Go 시계 호출 오버헤드(86ns)와 같은 자릿수라 단발
+계측이 원리적으로 불가능했다 — 상각(K분의1)으로 이 오버헤드를 op_cost 이하로 눌러야만 측정이
+성립했다. 자세한 논증은 `docs/paper/leveldrop_protocol_note.md` 참조.
+
+### 11.4 확정 결론 4개
+
+1. **자릿수**: `leveldrop_ip`는 전 프리셋·전 레벨에서 rescale·relin·rot1·mul_cc_rlk보다 최소
+   1자릿수 작다(SEAL 최악 8.2%), OpenFHE·Lattigo는 3~5자릿수 작다.
+2. **전이점(계단) pass/fail**: OpenFHE·Lattigo 전이점 45쌍 전부(45/45) drop 비용이 계단 이득보다
+   작다. 최악 여유폭도 0.030%(3300배 여유). (SEAL은 digit이 매 레벨 1씩 줄어 전이점 구분이
+   성립하지 않아 참고표로만 별도 확인 — 84/84 pass.)
+3. **레벨 의존성**: SEAL만 확실한 레벨 비례(R² 0.976~1.000, 임시버퍼+2회복사 기전과 일치).
+   OpenFHE는 약하지만 재현되는 비례(R² 0.41~0.93, 절대량 0.9~2.0μs로 무의미). Lattigo는
+   회귀상 유의해 보이나 측정 하한(§11.5)이라 통계적으로 판정 불가 — 메커니즘상 O(1) 추정.
+4. **ip/oop 방향이 라이브러리마다 반대**: OpenFHE·Lattigo는 ip가 oop보다 압도적으로 싸다(각각
+   최대 1000배·24000배). **SEAL만 역전** — ip가 oop보다 최대 4.3배 비싸다(`mod_switch_to_next_
+   inplace`가 임시버퍼+2회복사 구조인 반면 `mod_switch_to_next`는 남길 성분만 직접 복사).
+
+### 11.5 ⚠️ 함정 기록
+
+- **Lattigo 점추정값 인용 금지.** `leveldrop_ip` 실측이 23~121ns로 Go 시계 호출 오버헤드
+  (86ns)와 같은 자릿수다. 동일조건 재실행 2회 대조(A~D, 코어12 고정 동일 프로토콜)에서
+  32쌍 중 16쌍이 재실행 간 5% 문턱을 초과(중앙값 5.0%, 최대 35.2%) — 논문에는 정밀 μs/ns
+  값을 쓰지 말고 **"10¹~10² ns 대역"**으로만 서술한다. (이 대역의 하이퍼보수적 상한 1μs를
+  가정해도 §11.4-2의 pass/fail 결론은 안 바뀐다 — 최소 step_gain 2012μs 대비 2012배 여유.)
+- **"SEAL의 drop이 본질적으로 비싸다"로 읽지 말 것.** §11.4-4의 ip/oop 역전은 SEAL 라이브러리의
+  근본적 열위가 아니라 **API 경로 선택의 결과**다 — SEAL도 oop 경로를 쓰면 수백 μs대로
+  OpenFHE와 비슷한 자릿수이고, 그조차 계단 이득 대비 무시 가능하다(§11.4-1). 배치 최적화기가
+  "제자리 강하"를 선택하기 때문에 ip를 정본으로 쓰는 것이지 라이브러리 우열 문제가 아니다.
+
+### 11.6 산출물 경로
+
+- `results/leveldrop/results_leveldrop_{A,B,C,D}_{timing,verify}_1t_dku16c.csv` — 원자료(2026-08-19)
+- `results/leveldrop/lattigo_rerun_1t_dku16c/` — Lattigo 재실행 대조 원자료(2026-08-23, 신규)
+- `analysis/out/leveldrop_report.md` — 최초 종합 분석(2026-08-19)
+- `analysis/out/drop_verification_report.md` — 4.3절 확정 수치 재구성(2026-08-23, ip 정본)
+- `analysis/out/drop_verification_{orderofmag,passfail_transitions,passfail_all,linearfit,lattigo_rerun}.csv`
+- `analysis/out/drop_variant_comparison_presetA_wide.csv`
+- `docs/paper/leveldrop_protocol_note.md` — 측정 프로토콜 논증(4장 근거)
+- `docs/CAVEATS.md` — 발표·논문 해석 금지 규칙(§11.5 3건 포함)
+- `scripts/run_leveldrop.sh`, `scripts/leveldrop_unify.py` — 측정/집계 스크립트
