@@ -105,6 +105,7 @@ int main(int argc, char** argv)
 {
     int expSel = 1, reps = 30, warmup = 3, precreps = 5;
     std::string out = "timing.csv", precout = "precision.csv", spec, thlabel = "1t";
+    std::string opsFilter;   // "-ops a,b,c" — ops 목록을 이 집합으로 제한(시간 절약). 순서는 원 목록 유지.
     std::string verifyout = "";                 // exp 9 전용 검증 CSV
     long batchbudget = 64L * 1024 * 1024;       // in-place 배치 메모리 예산
     int  batchkmax = 2048;
@@ -131,6 +132,7 @@ int main(int argc, char** argv)
         else if (a == "-ldasc") ldasc = true;        // 진단: 레벨 오름차순
         else if (a == "-ldclone") ldclone = true;    // 진단: maxLevel 도 Clone 경유
         else if (a == "-threads" && i + 1 < argc) thlabel = argv[++i];
+        else if (a == "-ops" && i + 1 < argc) opsFilter = argv[++i];
     }
 
     std::vector<Cfg> cfgs;
@@ -210,6 +212,21 @@ int main(int argc, char** argv)
         cfgs.push_back({3, 15, 60, 40, 13, 3u});
         for (int L = 13; L >= 1; L--) levels.push_back(L);
         ops = {"add_cc", "add_cp", "mul_cp", "mul_cc", "mul_cc_rlk", "relin", "rescale", "rot1"};
+    }
+
+    if (!opsFilter.empty()) {
+        // 요청된 op 만 남긴다(원 ops 의 순서 유지). leveldrop(exp 9) 어휘는 별도라 건드리지 않는다.
+        std::vector<std::string> want;
+        size_t p = 0;
+        while (p < opsFilter.size()) {
+            size_t q = opsFilter.find(',', p); if (q == std::string::npos) q = opsFilter.size();
+            want.push_back(opsFilter.substr(p, q - p));
+            p = q + 1;
+        }
+        std::vector<std::string> filtered;
+        for (const auto& op : ops)
+            if (std::find(want.begin(), want.end(), op) != want.end()) filtered.push_back(op);
+        ops = filtered;
     }
 
     std::ofstream csv(out), pcsv;
