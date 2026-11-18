@@ -1,0 +1,15 @@
+[openfhe] threads=1t omp_get_max_threads()=1
+[openfhe exp5] Δ=42 dnum=3 PCount=4 logP=240 logQP=804 여유=77
+  L=12 done
+  L=11 done
+  L=10 done
+  L=9 done
+  L=8 done
+  L=7 done
+  L=6 done
+  L=5 done
+  L=4 done
+  L=3 done
+  L=2 done
+  L=1 done
+wrote /data/yja/he-bench/results/rerun_A_openfhe/run2/openfhe_timing.csv + /data/yja/he-bench/results/rerun_A_openfhe/run2/openfhe_precision.csv

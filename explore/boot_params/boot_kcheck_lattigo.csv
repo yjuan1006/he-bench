@@ -1,0 +1,3 @@
+logN,numSlots,q0,delta,residual_L,ephemeral_secret_weight,Xs,K_set,K_runtime,evalmod_levels,QCount_boot,logQ_boot,PCount_boot,logP_boot,logQP_boot,err
+16,32768,45,35,10,0,ternary_p2over3,16,16,8,26,1216,2,122,1338,
+16,32768,45,35,10,0,ternary_p2over3,512,512,13,31,1516,2,122,1638,

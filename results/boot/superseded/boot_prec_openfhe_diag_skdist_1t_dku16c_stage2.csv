@@ -1,0 +1,5 @@
+library,logN,numSlots,q0,delta,residual_L,levelBudget_c2s,levelBudget_s2c,boot_depth,dnum,PCount,logQ_boot,logP_boot,logQP_boot,rep,precision_bits,worst_slot_bits,boot_us,level_in,level_out,level_out_expected,magnitude_ratio,scaling,in_scale_log2,q0_minus_scale_log2,correction_factor,setup_us,keygen_us,peak_rss_mb,ok,fail_reason
+openfhe,16,32768,56,55,6,3,3,16,6,4,1266,240,1506,-1,12.3532,9.80671,27912730,21,15,16,1.00023,FIXEDMANUAL|SPARSE_TERNARY,55,1,7,11875430,53396637,13526,1,
+openfhe,16,32768,56,55,6,3,3,16,6,4,1266,240,1506,0,12.3495,9.98844,28372079,21,15,16,1.0004,FIXEDMANUAL|SPARSE_TERNARY,55,1,7,11875430,53396637,13526,1,
+openfhe,16,32768,56,55,6,3,3,16,6,4,1266,240,1506,1,12.3419,9.78235,27997302,21,15,16,1.00035,FIXEDMANUAL|SPARSE_TERNARY,55,1,7,11875430,53396637,13527,1,
+openfhe,16,32768,56,55,6,3,3,16,6,4,1266,240,1506,2,12.3496,9.82612,28383675,21,15,16,1.00012,FIXEDMANUAL|SPARSE_TERNARY,55,1,7,11875430,53396637,13527,1,

@@ -1,7 +1,10 @@
-# CLAUDE.md — HE Library Benchmark (OpenFHE vs Lattigo)
+# CLAUDE.md — HE Library Benchmark (OpenFHE vs Lattigo vs SEAL)
+
+> 이 문서는 **측정 API 사실** 전용이다. 파라미터 정본은 `docs/PARAMS_dku16c.md`,
+> 정합 기준·측정 규칙은 `docs/PROJECT_CONTEXT.md`, 실행/프로토콜은 `README.md`.
 
 ## 목적 (Goal)
-CKKS 연산의 **암호문 1개 기준** latency를 OpenFHE(C++)와 Lattigo(Go)에서 측정·비교한다.
+CKKS 연산의 **암호문 1개 기준** latency를 OpenFHE(C++) · Lattigo(Go) · SEAL(C++)에서 측정·비교한다.
 - 연산: 덧셈 / 곱셈 / 회전 (곱셈은 세부 케이스로 분해)
 - 조건: (a) 파라미터 프리셋별 + (b) 프리셋 내 레벨별 전수 스윕
 - 측정: 각 연산 warm-up 후 **30회**, **평균 + 표본표준편차(n-1)**, μs 단위
@@ -17,12 +20,25 @@ CKKS 연산의 **암호문 1개 기준** latency를 OpenFHE(C++)와 Lattigo(Go)�
 - 작업은 리눅스 홈 `~/he-bench`에서. `/mnt/c`(Windows FS)에서 빌드 금지(I/O 느림).
 - 파일 인코딩 UTF-8. 코드 주석 한국어 허용.
 
-## 디렉터리 (플랫 구조)
-he-bench/ 안에: CLAUDE.md, go.mod, lattigo_bench.go, openfhe_bench.cpp,
-CMakeLists.txt, aggregate.py, (+실행 산출) results_*.csv, plot_*.png
+## 디렉터리 (2026-08-01 개편 — 플랫 구조 폐지 / 2026-08-08 결과 CSV 분류)
+- `src/` — lattigo_bench.go, openfhe_bench.cpp, seal_bench.cpp, *_precision.*, param_dump_*, calib.c
+- `scripts/` — run_*.sh, aggregate.py, crossing_points.py, probe_check.py, clock_verdict.py …
+  - `respath.py` / `respath.sh` — **결과 CSV 위치 규칙의 정본**(읽는 쪽 / 쓰는 쪽)
+- `docs/` — PARAMS_dku16c.md, PROJECT_CONTEXT.md, SETUP_DKU16C.md, SEAL_TASK.md, ENV_dku16c.txt
+- `results/` — 측정 CSV 66. `v3/{A,B,C,D}` · `hexl/{arm,superseded}` ·
+  `baseline_mt_runs/{,superseded}` · `v2_discarded/`. **디렉터리마다 README.md 가 채택본/대체본을 밝힌다**
+- `explore/` — 집계 요약(v3_summary_*, hexl*_summary*) + `params/` 파라미터 탐색 덤프 17
+  - `boot_params/` — 부트스트래핑 1단계 격자 덤프(2자, keygen 없음). 보안 상한 출처가
+    A~D와 다르다(ePrint 2024/463 Table 5.2 = 1747 ↔ seal MaxBitCount). **같은 표에 섞지 말 것**
+- `archive/v1/` — 구 프리셋 측정 결과 (results/ CSV 25, plots/ PNG 24). **수정 금지**
+- 루트 — README.md, CLAUDE.md, CMakeLists.txt, go.mod/go.sum, calib, build_*/ , third_party/
+- 실행 산출: `run_*.sh` 가 `respath.sh` 를 거쳐 **`results/` 아래로** 떨어뜨린다(예전엔 루트).
+  집계 산출(plot_*.png / results_combined*.csv)은 plots/8op/ · plots/v3/
+- ⚠️ 결과 CSV를 읽는 새 스크립트를 만들면 경로를 하드코딩하지 말고 `respath.find("<파일명>")`을 쓸 것.
+  같은 이름이 두 곳에 있으면 중단한다(루트 잔여본 × 분류본의 조용한 혼동 방지).
 
 ## 공통 측정 스펙 (두 구현이 반드시 동일하게)
-CSV 스키마(헤더 고정, 두 라이브러리 동일):
+CSV 스키마(헤더 고정, **세 라이브러리 동일**):
   library,preset,logN,maxLevel,level,op,mean_us,std_us,reps
 op 목록(정확히 이 8개):
 - add_cc     ct+ct
@@ -30,7 +46,13 @@ op 목록(정확히 이 8개):
 - mul_cp     ct×pt (relin 불필요)
 - mul_cc     ct×ct, relin 없음(결과 degree-2)
 - mul_cc_rlk ct×ct, relin 포함(결과 degree-1)
-- relin      재선형화 비용 = mul_cc_rlk - mul_cc (음수면 0 clamp, std=0)
+- relin      재선형화 단독 비용. **직접 계측한다** — size-3(degree-2) 암호문을
+             타이머 밖에서 1회 만들고 out-of-place relinearize를 반복 측정.
+             ⚠️ 2026-07-26 이전 스펙은 `relin = mul_cc_rlk - mul_cc (음수면 0 clamp, std=0)`
+             파생값이었다. 바꾼 이유: (1) std=0이라 분산 정보가 없고 CV 통계를
+             인공적으로 낮췄다 (2) 융합 곱셈(EvalMult/MulRelin)이 있는 라이브러리에서는
+             '두 평균의 차'가 독립 relinearize 비용과 다른 양이다 (3) SEAL 하네스는
+             직접 계측이라 라이브러리 간 계측 방식이 불일치했다.
 - rescale    모듈러스 1개 드롭 (level>0에서만)
 - rot1       +1 슬롯 회전
 레벨 스윕: 각 프리셋에서 level = maxLevel..1 전부. 프리셋 3종(small/medium/large,
@@ -113,7 +135,8 @@ OpenFHE EvalAdd/EvalMult는 새 Ciphertext 반환(functional) → 매 호출 할
 - 빌드/실행 에러는 추측 말고 실제 메시지 기준으로 수정.
 
 ## 완료 기준 (Definition of Done)
-1. go run lattigo_bench.go → results_lattigo.csv (레벨×op 전부, 30회 평균·표준편차)
-2. cmake . && make && ./openfhe_bench → results_openfhe.csv (동일 스키마)
-3. python3 aggregate.py → results_combined.csv + plot_*.png + 콘솔 요약표
-4. 두 라이브러리 값이 정성적으로 일관(relin/rotation ≫ mul ≫ add, 레벨 단조 감소)
+1. go run src/lattigo_bench.go → results_lattigo.csv (레벨×op 전부, 30회 평균·표준편차)
+2. cmake -S . -B build_openfhe && make -C build_openfhe && ./build_openfhe/openfhe_bench
+   → results_openfhe.csv (동일 스키마)
+3. python3 scripts/aggregate.py --suffix ... → plots/8op/results_combined*.csv + plot_*.png + 콘솔 요약표
+4. 세 라이브러리 값이 정성적으로 일관(relin/rotation ≫ mul ≫ add, 레벨 단조 감소)
