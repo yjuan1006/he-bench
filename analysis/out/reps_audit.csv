@@ -1,0 +1,7 @@
+mode,library,n,uniq,min,max
+1t,lattigo,256,[30],30,30
+1t,openfhe,256,[30],30,30
+1t,seal,256,[30],30,30
+mt,lattigo,256,[30],30,30
+mt,openfhe,256,[30],30,30
+mt,seal,256,[30],30,30

@@ -55,3 +55,7 @@ plot_*.png
 .vscode/
 .idea/
 .DS_Store
+
+# --- 빌드 디렉터리 / 기타 바이너리 ---
+build_*/
+calib

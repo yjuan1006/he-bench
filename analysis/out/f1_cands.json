@@ -1,0 +1,1 @@
+{"cands": [{"preset": "A", "op": "mul_cc_rlk"}, {"preset": "B", "op": "relin"}, {"preset": "C", "op": "rot1"}], "neg_warn": false}
